@@ -1,5 +1,6 @@
 import os
 from celery import Celery
+from celery.schedules import crontab
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'socialnetworkapp.settings')
 
@@ -20,7 +21,7 @@ def debug_task(self):
 celery_app.conf.beat_schedule = {
     'run-lock-account-after-1-days': {
         'task': "socialnetwork.tasks.lock_expired_teacher_accounts",
-        'schedule': 5,
+        'schedule': crontab(minute=0),
     },
 }
 

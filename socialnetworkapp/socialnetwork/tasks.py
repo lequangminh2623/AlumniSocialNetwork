@@ -8,13 +8,11 @@ logger = logging.getLogger(__name__)
 @shared_task
 def lock_expired_teacher_accounts():
     try:
-        print(1)
-        expired_teachers = Teacher.objects.filter(must_change_password=True)
+        expired_teachers = Teacher.objects.filter(must_change_password=True, user__is_active=True)
         locked_count = 0
 
         for teacher in expired_teachers:
             try:
-                print(2)
                 if teacher.is_password_change_expired():
                     teacher.lock_account()
                     locked_count += 1
