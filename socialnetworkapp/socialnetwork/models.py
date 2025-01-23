@@ -33,7 +33,7 @@ class Role(IntEnum):
 
 class User(AbstractUser):
     avatar = CloudinaryField('avatar', null=False, blank=False, folder='MangXaHoi',
-        default='https://res.cloudinary.com/dp9b0dkkt/image/upload/v1736453398/de995be2-6311-4125-9ac2-19e11fcaf801.png')
+        default='https://res.cloudinary.com/dqw4mc8dg/image/upload/v1737620154/aj6sc6isvelwkotlo1vw_zxmebm_nbsj9i.png')
     cover = CloudinaryField('cover', null=True, blank=True, folder='MangXaHoi')
     email = models.EmailField(unique=True, null=False, max_length=255)
     role = models.IntegerField(
