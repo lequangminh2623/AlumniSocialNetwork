@@ -1,13 +1,17 @@
+import os
 from django.shortcuts import render
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import MultiPartParser, JSONParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
 from .models import User, Alumni, Teacher
 from .perms import AdminPermission, AlumniPermission
-from .serializers import UserSerializer, AlumniSerializer, TeacherSerializer
+from .serializers import UserSerializer, AlumniSerializer, TeacherSerializer, ChangePasswordSerializer
 from .paginators import Pagination
+from django.core.mail import send_mail
 
 
 def index(request):
@@ -16,13 +20,28 @@ def index(request):
     })
 
 # Create your views here.
+class ChangePasswordView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
 
-class UserViewSet(viewsets.ViewSet, generics.ListAPIView):
-    queryset = User.objects.filter(is_active=True)
-    serializer_class = UserSerializer
-    pagination_class = Pagination
-    permission_classes = [AdminPermission]
+    @action(methods=['patch'],url_path='change-password', detail=False)  # Định nghĩa phương thức PATCH
+    def change_password(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            user = request.user
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
 
+            # Nếu là giáo viên đổi mật khẩu lần đầu, sửa thuộc tính
+            if hasattr(user, 'teacher') and user.teacher.must_change_password:
+                teacher = user.teacher
+                teacher.must_change_password = False
+                teacher.password_reset_time = None
+                teacher.save()
+
+            return Response({"message": "Mật khẩu đã được thay đổi thành công."},
+                            status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -79,15 +98,29 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    from django.core.mail import send_mail
 
     @action(methods=['patch'], url_path='reset-password-timer', detail=True)
     def reset_password_time(self, request, pk=None):
         teacher = get_object_or_404(Teacher, pk=pk)
 
-        if teacher.must_change_password==True and teacher.is_password_change_expired()==True:
+        if teacher.must_change_password == True and teacher.is_password_change_expired() == True:
             teacher.unlock_account()
-            return Response({
-            "message": f"Thời gian đổi mật khẩu đã được đặt lại cho {teacher.user.username}."}, status=status.HTTP_200_OK)
 
-        return Response({"message":f"Tài khoản {teacher.user.username} đã đổi mật khẩu hoặc chưa hết thời gian đổi mật khẩu."},
-                        status=status.HTTP_400_BAD_REQUEST)
+            # Gửi email thông báo
+            send_mail(
+                subject='Thông báo đặt lại thời gian đổi mật khẩu',
+                message=f'Xin chào {teacher.user.username}, thời gian đổi mật khẩu tài khoản của bạn đã được đặt lại. Vui lòng đổi mật khẩu trong 24h.',
+                from_email=os.getenv('EMAIL_SEND'),
+                recipient_list=[teacher.user.email],
+                fail_silently=False,
+            )
+
+            return Response({
+                "message": f"Thời gian đổi mật khẩu đã được đặt lại cho {teacher.user.username}."
+            }, status=status.HTTP_200_OK)
+
+        return Response(
+            {"message": f"Tài khoản {teacher.user.username} đã đổi mật khẩu hoặc chưa hết thời gian đổi mật khẩu."},
+            status=status.HTTP_400_BAD_REQUEST
+        )

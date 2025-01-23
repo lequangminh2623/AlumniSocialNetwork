@@ -1,9 +1,20 @@
 import os
-from rest_framework.serializers import ModelSerializer, ValidationError
+
+from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer, ValidationError, Serializer, CharField
 from .models import User, Alumni, Teacher
 from django.core.mail import send_mail
 from django.utils import timezone
 
+class ChangePasswordSerializer(Serializer):
+    current_password = CharField(write_only=True, required=True)
+    new_password = CharField(write_only=True, required=True)
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Mật khẩu hiện tại không đúng.")
+        return value
 
 class UserSerializer(ModelSerializer):
 
