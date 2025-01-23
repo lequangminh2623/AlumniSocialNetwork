@@ -72,6 +72,20 @@ class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
         alumni.is_verified = True
         alumni.save()
+        send_mail(
+            subject='Thông báo duyệt tài khoản',
+            message=f"""
+                Chào {alumni.user.first_name},
+        
+                Tài khoản cựu sinh viên của bạn đã được duyệt.
+        
+                Trân Trọng,
+                Đội ngũ Admin
+            """,
+            from_email=os.getenv('EMAIL_SEND'),
+            recipient_list=[alumni.user.email],
+            fail_silently=False,
+        )
 
         return Response(
             {"message": "Duyệt tài khoản thành công.", "alumni_id": alumni.id},
@@ -98,8 +112,6 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    from django.core.mail import send_mail
-
     @action(methods=['patch'], url_path='reset-password-timer', detail=True)
     def reset_password_time(self, request, pk=None):
         teacher = get_object_or_404(Teacher, pk=pk)
@@ -109,8 +121,15 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
             # Gửi email thông báo
             send_mail(
-                subject='Thông báo đặt lại thời gian đổi mật khẩu',
-                message=f'Xin chào {teacher.user.username}, thời gian đổi mật khẩu tài khoản của bạn đã được đặt lại. Vui lòng đổi mật khẩu trong 24h.',
+                subject='Thông báo gia hạn thời gian đổi mật khẩu',
+                message=f"""
+                    Chào {teacher.user.first_name},
+            
+                    Tài khoản giảng viên của bạn đã được gia hạn thời gian đổi mật khẩu.
+            
+                    Trân Trọng,
+                    Đội ngũ Admin
+                """,
                 from_email=os.getenv('EMAIL_SEND'),
                 recipient_list=[teacher.user.email],
                 fail_silently=False,
