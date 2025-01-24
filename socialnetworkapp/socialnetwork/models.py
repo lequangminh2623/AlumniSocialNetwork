@@ -21,6 +21,7 @@ class BaseModel(models.Model):
         self.save()
 
 
+
 class Role(IntEnum):
     ADMIN = 0
     ALUMNI = 1
@@ -42,7 +43,7 @@ class User(AbstractUser):
     )
 
 
-class Alumni(models.Model):
+class Alumni(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     student_code = models.CharField(max_length=10, unique=True)
     is_verified = models.BooleanField(default=False)
@@ -51,7 +52,7 @@ class Alumni(models.Model):
         return str(self.user)
 
 
-class Teacher(models.Model):
+class Teacher(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     must_change_password = models.BooleanField(default=True)
     password_reset_time = models.DateTimeField(null=True, blank=True)

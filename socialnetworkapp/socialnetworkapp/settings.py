@@ -185,30 +185,49 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Ho_Chi_Minh'
 
-CELERY_IMPORTS = (
-    'socialnetwork.tasks',
-)
-
 CELERY_IMPORTS = ('socialnetwork.tasks',)
+
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
-        'celery': {
+        'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': '%s/log/celery_task_log.log' % BASE_DIR,
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
         },
     },
     'loggers': {
-        'celery': {
-            'handlers': ['celery'],
+        'celery': {  # Celery specific logger
+            'handlers': ['console', 'file'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
+        },
+        'django': {  # Django's logger (optional)
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
         },
     },
 }
+
 
 CLIENT_ID='HlK6gpKpA3SUdCkf4fZOSzGTU5IdOWEVtcBu7fIB'
 CLIENT_SECRET='MNLnudpNi0jWlN4hglm8NCZBUKfqd1OXxqyrtd7WJ404CmZUkLaemkC2e2iafkwumHQTcbhecsO8EUYnrWbwewyT8gR78e6ncTWs7DJgm7LfToGNFB2nKjzHXq8ns4gy'

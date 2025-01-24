@@ -23,6 +23,10 @@ celery_app.conf.beat_schedule = {
         'task': "socialnetwork.tasks.lock_expired_teacher_accounts",
         'schedule': crontab(minute=0),
     },
+    'delete-soft-deleted-records-every-day': {
+        'task': 'socialnetwork.tasks.delete_permanently_after_30_days',
+        'schedule': 5,
+    },
 }
 
 celery_app.conf.broker_connection_retry_on_startup = True
