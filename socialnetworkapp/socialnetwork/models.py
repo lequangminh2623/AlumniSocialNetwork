@@ -34,7 +34,7 @@ class Role(IntEnum):
 
 class User(AbstractUser):
     avatar = CloudinaryField('avatar', null=False, blank=False, folder='MangXaHoi',
-        default='https://res.cloudinary.com/dp9b0dkkt/image/upload/v1736453398/de995be2-6311-4125-9ac2-19e11fcaf801.png')
+        default='https://res.cloudinary.com/dqw4mc8dg/image/upload/v1737620154/aj6sc6isvelwkotlo1vw_zxmebm_nbsj9i.png')
     cover = CloudinaryField('cover', null=True, blank=True, folder='MangXaHoi')
     email = models.EmailField(unique=True, null=False, max_length=255)
     role = models.IntegerField(
@@ -87,10 +87,14 @@ class Post(BaseModel):
     def __str__(self):
         return self.content
 
+    def can_user_comment(self):
+        return not self.lock_comment
+
+
 class PostImage(models.Model):
     image = CloudinaryField('Post Image', null=True, blank=True, folder='MangXaHoi')
 
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='images')
 
 
 class SurveyType(IntEnum):
@@ -192,3 +196,9 @@ class Comment(Interaction):
         if self.parent:
             return f"Reply to {self.parent.id} - {self.content[:30]}"
         return self.content[:30]
+
+    def can_edit_or_delete(self, user):
+        return self.user == user  # Chỉ người viết mới có quyền xóa hoặc sửa
+
+    def can_owner_delete(self, post_user):
+        return self.post.user == post_user  # Chỉ chủ bài viết mới được xóa comment

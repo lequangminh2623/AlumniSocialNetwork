@@ -1,20 +1,12 @@
 import os
 
 from rest_framework import serializers
-from rest_framework.serializers import ModelSerializer, ValidationError, Serializer, CharField
-from .models import User, Alumni, Teacher
+from rest_framework.serializers import ModelSerializer, ValidationError, Serializer, CharField, StringRelatedField
+from .models import User, Alumni, Teacher, Post, PostImage, Comment
 from django.core.mail import send_mail
 from django.utils import timezone
 
-class ChangePasswordSerializer(Serializer):
-    current_password = CharField(write_only=True, required=True)
-    new_password = CharField(write_only=True, required=True)
 
-    def validate_current_password(self, value):
-        user = self.context['request'].user
-        if not user.check_password(value):
-            raise serializers.ValidationError("Mật khẩu hiện tại không đúng.")
-        return value
 
 class UserSerializer(ModelSerializer):
 
@@ -36,6 +28,57 @@ class UserSerializer(ModelSerializer):
                 'required': False
             }
         }
+
+
+class PostImageSerializer(ModelSerializer):
+
+    class Meta:
+        model = PostImage
+        fields = ['id', 'image']
+
+
+class PostSerializer(ModelSerializer):
+    images = PostImageSerializer(many=True, required=False)
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Post
+        fields = ['id', 'content', 'images', 'lock_comment', 'user', 'created_date', 'updated_date']
+
+
+
+class CommentSerializer(ModelSerializer):
+    user = UserSerializer(read_only=True)
+    post = PostSerializer(read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'user', 'content', 'image', 'post', 'parent', 'created_date', 'updated_date']
+
+    def create(self, validated_data):
+        parent_comment = validated_data.get('parent_comment', None)
+        comment = Comment.objects.create(**validated_data)
+        return comment
+
+
+# class ReactionSerializer(ModelSerializer):
+#     user = StringRelatedField(read_only=True)
+#
+#     class Meta:
+#         model = Reaction
+#         fields = ['id', 'reaction', 'user', 'post', 'created_date', 'updated_date']
+
+
+
+class ChangePasswordSerializer(Serializer):
+    current_password = CharField(write_only=True, required=True)
+    new_password = CharField(write_only=True, required=True)
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Mật khẩu hiện tại không đúng.")
+        return value
 
 
 class AlumniSerializer(ModelSerializer):
