@@ -6,6 +6,8 @@ from .models import User, Alumni, Teacher, Post, PostImage, Comment, SurveyOptio
     SurveyType
 from django.core.mail import send_mail
 from django.utils import timezone
+from cloudinary.uploader import upload
+from cloudinary.exceptions import Error
 
 
 
@@ -93,10 +95,26 @@ class AlumniSerializer(ModelSerializer):
     def create(self, validated_data):
         user_data = validated_data.pop('user')
         user_data['role'] = 1
+        avatar = user_data.pop('avatar', None)
+        cover = user_data.pop('cover', None)
         password = user_data.get('password')
 
         if not password:
             raise ValidationError({"password": "Yêu cầu mật khẩu."})
+
+        if avatar:
+            try:
+                avatar_result = upload(avatar, folder="MangXaHoi")
+                user_data['avatar'] = avatar_result.get('secure_url')
+            except Error as e:
+                raise ValidationError({"avatar": f"Lỗi đăng tải avatar: {str(e)}"})
+
+        if cover:
+            try:
+                cover_result = upload(cover, folder="MangXaHoi")
+                user_data['cover'] = cover_result.get('secure_url')
+            except Error as e:
+                raise ValidationError({"cover": f"Lỗi đăng tải cover: {str(e)}"})
 
         user = User.objects.create_user(
             username=user_data.get('username'),
@@ -105,6 +123,7 @@ class AlumniSerializer(ModelSerializer):
             last_name=user_data.get('last_name'),
             email=user_data.get('email'),
             avatar=user_data.get('avatar'),
+            cover=user_data.get('cover'),
             role=user_data.get('role')
         )
 
@@ -122,8 +141,23 @@ class TeacherSerializer(ModelSerializer):
     def create(self, validated_data):
         user_data = validated_data.pop('user')
         user_data['role'] = 2
+        avatar = user_data.pop('avatar', None)
+        cover = user_data.pop('cover', None)
         password = user_data.get('password', 'ou@123')
 
+        if avatar:
+            try:
+                avatar_result = upload(avatar, folder="MangXaHoi")
+                user_data['avatar'] = avatar_result.get('secure_url')
+            except Error as e:
+                raise ValidationError({"avatar": f"Lỗi đăng tải avatar: {str(e)}"})
+
+        if cover:
+            try:
+                cover_result = upload(cover, folder="MangXaHoi")
+                user_data['cover'] = cover_result.get('secure_url')
+            except Error as e:
+                raise ValidationError({"cover": f"Lỗi đăng tải cover: {str(e)}"})
 
         user = User.objects.create_user(
             username=user_data.get('username'),
@@ -132,6 +166,7 @@ class TeacherSerializer(ModelSerializer):
             last_name=user_data.get('last_name'),
             email=user_data.get('email'),
             avatar=user_data.get('avatar'),
+            cover=user_data.get('cover'),
             role=user_data.get('role')
         )
 
