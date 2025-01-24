@@ -1,18 +1,19 @@
 import os
+from datetime import timezone
 from importlib.resources import files
 
 from django.shortcuts import render
 from rest_framework import viewsets, generics, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, permission_classes
 from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import MultiPartParser, JSONParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.response import Response
 
-from .models import Alumni, Teacher, Post, Comment, Reaction, PostImage
-from .perms import AdminPermission
+from .models import Alumni, Teacher, Post, Comment, Reaction, PostImage, SurveyPost, SurveyQuestion, SurveyOption
+from .perms import AdminPermission, OwnerPermission
 from .serializers import AlumniSerializer, TeacherSerializer, ChangePasswordSerializer, PostSerializer, \
-    PostImageSerializer, CommentSerializer
+    PostImageSerializer, CommentSerializer, SurveyPostSerializer, SurveyQuestionSerializer, SurveyOptionSerializer
 from .paginators import Pagination
 from django.core.mail import send_mail
 
@@ -29,13 +30,22 @@ class PostImageViewSet(viewsets.ViewSet, generics.ListAPIView):
     serializer_class = PostImageSerializer
 
 
-class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIView):
+class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIView, generics.DestroyAPIView):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
 
-    @action(methods=['post'], url_path='create-post', detail=False, permission_classes=[IsAuthenticated])
-    def create_post(self, request):
+    def get_permissions(self):
+        if self.action == 'create':
+            permission_classes = [IsAuthenticated]
+        elif self.action == 'destroy':
+            permission_classes = [OwnerPermission, AdminPermission]
+        elif self.action == 'partial_update':
+            permission_classes = [OwnerPermission]
+        else:
+            permission_classes = [AllowAny]
+        return [permission() for permission in permission_classes]
 
+    def create(self, request):
         content = request.data.get('content')
         images = request.FILES.getlist('images')
         post = Post.objects.create(content=content, user=request.user)
@@ -46,15 +56,8 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @action(methods=['get'], url_path='list-comment', detail=True)
-    def get_comments(self, request, pk=None):
-        post = get_object_or_404(Post, pk=pk)
-        comments = Comment.objects.filter(post=post).order_by('created_date')
-        serializer = CommentSerializer(comments, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-    @action(methods=['post'], url_path='create-comment', detail=True, permission_classes=[IsAuthenticated])
+    @action(methods=['post'], url_path='comment', detail=True, permission_classes=[IsAuthenticated])
     def create_comment(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk)
 
@@ -73,30 +76,22 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         return Response({'message': 'Cập nhật trạng thái bình luận của bài đăng thành công.'})
 
 
-    @action(methods=['delete'], url_path='delete-post', detail=True, permission_classes=[IsAuthenticated])
-    def delete_post(self, request, pk=None):
-        post = get_object_or_404(Post, pk=pk, user=request.user)
-        post.delete()
-        return Response({'message': 'Bài viết đã được xóa thành công.'}, status=status.HTTP_204_NO_CONTENT)
-
-
-
-
-
-class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
+class CommentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
 
-    @action(detail=True, methods=['delete'], url_path='delete-comment', permission_classes=[IsAuthenticated])
-    def delete_comment(self, request, pk=None):
-        comment = get_object_or_404(Comment, id=pk)
-        if comment.post.user == request.user or comment.user == request.user:
-            comment.delete()
-            return Response({'message': 'Xóa bình luận thành công.'}, status=status.HTTP_204_NO_CONTENT)
-        return Response({'message': 'Bạn không có quyền xóa bình luận này.'}, status=status.HTTP_403_FORBIDDEN)
+    def get_permissions(self):
+        if self.action == 'create':
+            permission_classes = [IsAuthenticated]
+        elif self.action == 'destroy':
+            permission_classes = [OwnerPermission, AdminPermission]
+        elif self.action == 'partial_update':
+            permission_classes = [OwnerPermission]
+        else:
+            permission_classes = [AllowAny]
+        return [permission() for permission in permission_classes]
 
-    @action(methods=['patch'], url_path='edit-comment', detail=True, permission_classes=[IsAuthenticated])
-    def edit_comment(self, request, pk=None):
+    def partial_update(self, request, pk=None):
         comment = get_object_or_404(Comment, id=pk, user=request.user)
         serializer = CommentSerializer(comment, data=request.data, partial=True)
         if serializer.is_valid():
@@ -104,7 +99,7 @@ class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
             return Response({'message': 'Chỉnh sửa bình luận thành công.'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['post'], detail=True, url_path='reply-comment', permission_classes=[IsAuthenticated])
+    @action(methods=['post'], detail=True, url_path='comment', permission_classes=[IsAuthenticated])
     def reply_comment(self, request, pk=None):
         comment = get_object_or_404(Comment, id=pk)
         serializer = CommentSerializer(data=request.data)
@@ -121,9 +116,7 @@ class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 
 class ChangePasswordView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
-
-    @action(methods=['patch'],url_path='change-password', detail=False)  # Định nghĩa phương thức PATCH
+    @action(methods=['patch'],url_path='change-password', detail=False, permission_classes=[OwnerPermission])  # Định nghĩa phương thức PATCH
     def change_password(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
@@ -144,23 +137,22 @@ class ChangePasswordView(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
+class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.ListAPIView):
     queryset = Alumni.objects.select_related('user')
     serializer_class = AlumniSerializer
     pagination_class = Pagination
     parser_classes = [JSONParser, MultiPartParser, ]
 
-    @action(methods=['get'], url_path='list-alumni', detail=False, permission_classes=[AdminPermission])
-    def list_alumni(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+    def get_permissions(self):
+        if self.action == 'list':
+            permission_classes = [AdminPermission]
+        elif self.action == 'destroy':
+            permission_classes = [OwnerPermission, AdminPermission]
+        elif self.action == 'partial_update':
+            permission_classes = [OwnerPermission]
+        else:
+            permission_classes = [AllowAny]
+        return [permission() for permission in permission_classes]
 
     @action(methods=['patch'], url_path='approve-alumni', detail=True, permission_classes=[AdminPermission])
     def approve_alumni(self, request, pk=None):
@@ -243,3 +235,55 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
             {"message": f"Tài khoản {teacher.user.username} đã đổi mật khẩu hoặc chưa hết thời gian đổi mật khẩu."},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+class SurveyPostViewSet(viewsets.ViewSet):
+    queryset = SurveyPost.objects.all()
+    serializer_class = SurveyPostSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def create(self, request):
+        serializer = SurveyPostSerializer(data=request.data)
+        if serializer.is_valid():
+            survey_post = serializer.save()
+
+            images = request.data.get('images', [])
+            questions = request.data.get('questions', [])
+
+            for image in images:
+                PostImage.objects.create(post=survey_post, image=image)
+
+            for question in questions:
+                survey_question = SurveyQuestion.objects.create(survey_post=survey_post, **question)
+                for option in question.get('options', []):
+                    SurveyOption.objects.create(survey_question=survey_question, **option)
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def partial_update(self, request, pk=None):
+        try:
+            survey_post = SurveyPost.objects.get(pk=pk)
+        except SurveyPost.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = SurveyPostSerializer(survey_post, data=request.data, partial=True)
+        if serializer.is_valid():
+            survey_post = serializer.save()
+
+            images = request.data.get('images', [])
+            questions = request.data.get('questions', [])
+
+            PostImage.objects.filter(post=survey_post).delete()
+            SurveyQuestion.objects.filter(survey_post=survey_post).delete()
+            SurveyOption.objects.filter(survey_question__survey_post=survey_post).delete()
+
+            for image in images:
+                PostImage.objects.create(post=survey_post, image=image)
+
+            for question_data in questions:
+                question = SurveyQuestion.objects.create(survey_post=survey_post, **question_data)
+                for option_data in question_data.get('options', []):
+                    SurveyOption.objects.create(survey_question=question, **option_data)
+
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

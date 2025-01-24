@@ -2,7 +2,8 @@ import os
 
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError, Serializer, CharField, StringRelatedField
-from .models import User, Alumni, Teacher, Post, PostImage, Comment
+from .models import User, Alumni, Teacher, Post, PostImage, Comment, SurveyOption, SurveyQuestion, SurveyPost, \
+    SurveyType
 from django.core.mail import send_mail
 from django.utils import timezone
 
@@ -159,3 +160,26 @@ class TeacherSerializer(ModelSerializer):
         """
         send_mail(subject, message, os.getenv('EMAIL_SEND'), [user.email])
 
+class SurveyOptionSerializer(serializers.ModelSerializer):
+    users = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all())
+
+    class Meta:
+        model = SurveyOption
+        fields = ['id', 'option', 'users']
+
+
+class SurveyQuestionSerializer(serializers.ModelSerializer):
+    options = SurveyOptionSerializer(many=True)
+
+    class Meta:
+        model = SurveyQuestion
+        fields = ['id', 'question', 'multi_choice', 'options']
+
+
+class SurveyPostSerializer(serializers.ModelSerializer):
+    survey_type = serializers.ChoiceField(choices=SurveyType.choices())
+    questions = SurveyQuestionSerializer(many=True)
+
+    class Meta:
+        model = SurveyPost
+        fields = ['id', 'content', 'lock_comment', 'user', 'end_time', 'survey_type', 'images', 'questions']
