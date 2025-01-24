@@ -1,4 +1,6 @@
 import os
+from importlib.resources import files
+
 from django.shortcuts import render
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
@@ -7,9 +9,10 @@ from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import User, Alumni, Teacher
-from .perms import AdminPermission, AlumniPermission
-from .serializers import UserSerializer, AlumniSerializer, TeacherSerializer, ChangePasswordSerializer
+from .models import Alumni, Teacher, Post, Comment, Reaction, PostImage
+from .perms import AdminPermission
+from .serializers import AlumniSerializer, TeacherSerializer, ChangePasswordSerializer, PostSerializer, \
+    PostImageSerializer, CommentSerializer
 from .paginators import Pagination
 from django.core.mail import send_mail
 
@@ -20,6 +23,103 @@ def index(request):
     })
 
 # Create your views here.
+
+class PostImageViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = PostImage.objects.all()
+    serializer_class = PostImageSerializer
+
+
+class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+
+    @action(methods=['post'], url_path='create-post', detail=False, permission_classes=[IsAuthenticated])
+    def create_post(self, request):
+
+        content = request.data.get('content')
+        images = request.FILES.getlist('images')
+        post = Post.objects.create(content=content, user=request.user)
+
+        for image in images:
+            PostImage.objects.create(post=post, image=image)
+        serializer = self.get_serializer(post)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(methods=['get'], url_path='list-comment', detail=True)
+    def get_comments(self, request, pk=None):
+        post = get_object_or_404(Post, pk=pk)
+        comments = Comment.objects.filter(post=post).order_by('created_date')
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+    @action(methods=['post'], url_path='create-comment', detail=True, permission_classes=[IsAuthenticated])
+    def create_comment(self, request, pk=None):
+        post = get_object_or_404(Post, pk=pk)
+
+        serializer = CommentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user, post=post)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @action(methods=['patch'], url_path='lock-unlock-comment', detail=True, permission_classes = [IsAuthenticated])
+    def lock_unlock_comments(self, request, pk=None):
+        post = get_object_or_404(Post, pk=pk, user=request.user)
+        post.lock_comment = not post.lock_comment
+        post.save()
+        return Response({'message': 'Cập nhật trạng thái bình luận của bài đăng thành công.'})
+
+
+    @action(methods=['delete'], url_path='delete-post', detail=True, permission_classes=[IsAuthenticated])
+    def delete_post(self, request, pk=None):
+        post = get_object_or_404(Post, pk=pk, user=request.user)
+        post.delete()
+        return Response({'message': 'Bài viết đã được xóa thành công.'}, status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+
+class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+
+    @action(detail=True, methods=['delete'], url_path='delete-comment', permission_classes=[IsAuthenticated])
+    def delete_comment(self, request, pk=None):
+        comment = get_object_or_404(Comment, id=pk)
+        if comment.post.user == request.user or comment.user == request.user:
+            comment.delete()
+            return Response({'message': 'Xóa bình luận thành công.'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'message': 'Bạn không có quyền xóa bình luận này.'}, status=status.HTTP_403_FORBIDDEN)
+
+    @action(methods=['patch'], url_path='edit-comment', detail=True, permission_classes=[IsAuthenticated])
+    def edit_comment(self, request, pk=None):
+        comment = get_object_or_404(Comment, id=pk, user=request.user)
+        serializer = CommentSerializer(comment, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'Chỉnh sửa bình luận thành công.'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['post'], detail=True, url_path='reply-comment', permission_classes=[IsAuthenticated])
+    def reply_comment(self, request, pk=None):
+        comment = get_object_or_404(Comment, id=pk)
+        serializer = CommentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user, post=comment.post, parent=comment)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# class ReactionViewSet(viewsets.ViewSet, generics.CreateAPIView):
+#     queryset = Reaction.objects.all()
+#     serializer_class = ReactionSerializer
+#     permission_classes = [IsAuthenticated]
+
+
+
 class ChangePasswordView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
