@@ -15,6 +15,8 @@ from .serializers import AlumniSerializer, TeacherSerializer, ChangePasswordSeri
     PostImageSerializer, CommentSerializer
 from .paginators import Pagination
 from django.core.mail import send_mail
+from cloudinary.uploader import upload
+from cloudinary.exceptions import Error
 
 
 def index(request):
@@ -32,6 +34,7 @@ class PostImageViewSet(viewsets.ViewSet, generics.ListAPIView):
 class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIView):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
+    parser_classes = [JSONParser, MultiPartParser, ]
 
     @action(methods=['post'], url_path='create-post', detail=False, permission_classes=[IsAuthenticated])
     def create_post(self, request):
@@ -41,7 +44,12 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         post = Post.objects.create(content=content, user=request.user)
 
         for image in images:
-            PostImage.objects.create(post=post, image=image)
+            try:
+                upload_result = upload(image, folder='MangXaHoi')
+                image_url = upload_result.get('secure_url')
+                PostImage.objects.create(post=post, image=image_url)
+            except Error as e:
+                return Response({"error": f"Lỗi đăng bài: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(post)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -86,6 +94,7 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
 class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
+    parser_classes = [JSONParser, MultiPartParser, ]
 
     @action(detail=True, methods=['delete'], url_path='delete-comment', permission_classes=[IsAuthenticated])
     def delete_comment(self, request, pk=None):
@@ -122,6 +131,7 @@ class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 class ChangePasswordView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, ]
 
     @action(methods=['patch'],url_path='change-password', detail=False)  # Định nghĩa phương thức PATCH
     def change_password(self, request):
@@ -195,7 +205,7 @@ class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
 
 class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
-    queryset = Teacher.objects.select_related('user') # queryset = Teacher.objects.all()
+    queryset = Teacher.objects.select_related('user')
     serializer_class = TeacherSerializer
     pagination_class = Pagination
     parser_classes = [JSONParser, MultiPartParser, ]
