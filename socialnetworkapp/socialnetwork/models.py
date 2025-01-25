@@ -120,7 +120,7 @@ class SurveyQuestion(models.Model):
     question = models.TextField()
     multi_choice = models.BooleanField(default=False)
 
-    survey_post = models.ForeignKey(SurveyPost,  on_delete=models.CASCADE)
+    survey_post = models.ForeignKey(SurveyPost,  on_delete=models.CASCADE, related_name='questions')
 
     def __str__(self):
         return self.question
@@ -130,10 +130,27 @@ class SurveyOption(models.Model):
     option = models.TextField()
 
     survey_question = models.ForeignKey(SurveyQuestion, on_delete=models.CASCADE)
-    users = models.ManyToManyField(User, blank=True)
 
     def __str__(self):
         return self.option
+
+
+class UserSurveyOption(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    survey_option = models.ForeignKey(SurveyOption, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('user', 'survey_option')
+
+
+class SurveyDraft(models.Model):
+    survey_post = models.ForeignKey(SurveyPost, on_delete=models.CASCADE, related_name='drafts')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='drafts')
+    answers = models.JSONField(default=dict)
+    drafted_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('survey_post', 'user')
 
 
 class Group(BaseModel):
@@ -202,3 +219,4 @@ class Comment(Interaction):
 
     def can_owner_delete(self, post_user):
         return self.post.user == post_user  # Chỉ chủ bài viết mới được xóa comment
+
