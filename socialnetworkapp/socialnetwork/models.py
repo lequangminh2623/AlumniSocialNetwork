@@ -129,7 +129,7 @@ class SurveyQuestion(models.Model):
 class SurveyOption(models.Model):
     option = models.TextField()
 
-    survey_question = models.ForeignKey(SurveyQuestion, on_delete=models.CASCADE)
+    survey_question = models.ForeignKey(SurveyQuestion, on_delete=models.CASCADE, related_name='options')
 
     def __str__(self):
         return self.option

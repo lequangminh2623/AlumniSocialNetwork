@@ -1,9 +1,9 @@
 import os
 
 from rest_framework import serializers
-from rest_framework.serializers import ModelSerializer, ValidationError, Serializer, CharField, StringRelatedField
+from rest_framework.serializers import ModelSerializer, ValidationError, Serializer, CharField
 from .models import User, Alumni, Teacher, Post, PostImage, Comment, SurveyOption, SurveyQuestion, SurveyPost, \
-    SurveyType, SurveyDraft
+    SurveyDraft, UserSurveyOption
 from django.core.mail import send_mail
 from django.utils import timezone
 from cloudinary.uploader import upload
@@ -49,7 +49,6 @@ class PostSerializer(ModelSerializer):
         fields = ['id', 'content', 'images', 'lock_comment', 'user', 'created_date', 'updated_date']
 
 
-
 class CommentSerializer(ModelSerializer):
     user = UserSerializer(read_only=True)
     post = PostSerializer(read_only=True)
@@ -58,10 +57,6 @@ class CommentSerializer(ModelSerializer):
         model = Comment
         fields = ['id', 'user', 'content', 'image', 'post', 'parent', 'created_date', 'updated_date']
 
-    def create(self, validated_data):
-        parent_comment = validated_data.get('parent_comment', None)
-        comment = Comment.objects.create(**validated_data)
-        return comment
 
 
 # class ReactionSerializer(ModelSerializer):
@@ -195,146 +190,37 @@ class TeacherSerializer(ModelSerializer):
         """
         send_mail(subject, message, os.getenv('EMAIL_SEND'), [user.email])
 
-# class SurveyOptionSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = SurveyOption
-#         fields = ['id', 'option']
-#
-#
-# class SurveyQuestionSerializer(serializers.ModelSerializer):
-#     options = SurveyOptionSerializer(many=True)  # Nested options
-#
-#     class Meta:
-#         model = SurveyQuestion
-#         fields = ['id', 'question', 'multi_choice', 'options']
-#
-#     def create(self, validated_data):
-#         """
-#         Create SurveyQuestion along with nested SurveyOptions.
-#         """
-#         options_data = validated_data.pop('options', [])  # Extract nested options
-#         survey_question = SurveyQuestion.objects.create(**validated_data)  # Create the question
-#         for option_data in options_data:
-#             SurveyOption.objects.create(survey_question=survey_question, **option_data)  # Create options
-#         return survey_question
-#
-#     def update(self, instance, validated_data):
-#         """
-#         Update SurveyQuestion and its nested SurveyOptions.
-#         If options exist, update them; otherwise, remove them and add new ones.
-#         """
-#         options_data = validated_data.pop('options', [])
-#
-#         # Update the question fields
-#         instance.question = validated_data.get('question', instance.question)
-#         instance.multi_choice = validated_data.get('multi_choice', instance.multi_choice)
-#         instance.save()
-#
-#         # Handle nested SurveyOptions
-#         # Clear existing options
-#         instance.options.all().delete()
-#
-#         # Recreate options from the updated data
-#         for option_data in options_data:
-#             SurveyOption.objects.create(survey_question=instance, **option_data)
-#
-#         return instance
-#
-#
-# class SurveyPostSerializer(PostSerializer):
-#     survey_type = serializers.ChoiceField(choices=SurveyType.choices())
-#     questions = SurveyQuestionSerializer(many=True)  # Nested questions
-#
-#     class Meta:
-#         model = SurveyPost
-#         fields = ['id', 'content', 'lock_comment', 'user', 'end_time', 'survey_type', 'images', 'questions']
-#
-#
-#     def create(self, validated_data):
-#         """
-#         Create SurveyPost along with nested SurveyQuestions and SurveyOptions.
-#         """
-#         questions_data = validated_data.pop('questions', [])  # Extract nested questions
-#         survey_post = SurveyPost.objects.create(**validated_data)  # Create the survey post
-#
-#         for question_data in questions_data:
-#             options_data = question_data.pop('options', [])  # Extract nested options
-#             survey_question = SurveyQuestion.objects.create(survey_post=survey_post,
-#                                                             **question_data)  # Create each question
-#             for option_data in options_data:
-#                 SurveyOption.objects.create(survey_question=survey_question,
-#                                             **option_data)  # Create options for each question
-#
-#         return survey_post
-#
-#     def update(self, instance, validated_data):
-#         """
-#         Update SurveyPost and its nested SurveyQuestions and SurveyOptions.
-#         """
-#         questions_data = validated_data.pop('questions', [])
-#
-#         # Update main fields of SurveyPost
-#         instance.content = validated_data.get('content', instance.content)
-#         instance.lock_comment = validated_data.get('lock_comment', instance.lock_comment)
-#         instance.end_time = validated_data.get('end_time', instance.end_time)
-#         instance.survey_type = validated_data.get('survey_type', instance.survey_type)
-#         instance.save()
-#
-#         # Update nested SurveyQuestions
-#         instance.questions.all().delete()  # Clear all existing questions
-#
-#         # Recreate questions and their nested options
-#         for question_data in questions_data:
-#             options_data = question_data.pop('options', [])
-#             survey_question = SurveyQuestion.objects.create(survey_post=instance,
-#                                                             **question_data)  # Create each question
-#             for option_data in options_data:
-#                 SurveyOption.objects.create(survey_question=survey_question,
-#                                             **option_data)  # Create options for each question
-#
-#         return instance
-#
-#
-# class SurveyDraftSerializer(serializers.ModelSerializer):
-#     survey_post = SurveyPostSerializer(read_only=False)  # Enable write for nested SurveyPost
-#     user = UserSerializer(read_only=True)  # Keep user read-only
-#
-#     class Meta:
-#         model = SurveyDraft
-#         fields = ['id', 'survey_post', 'user', 'answers', 'token', 'drafted_at']
-#         read_only_fields = ['id', 'token', 'drafted_at']
-#
-#
-#
-#     def create(self, validated_data):
-#         """
-#         Create SurveyDraft and associated SurveyPost if provided.
-#         """
-#         survey_post_data = validated_data.pop('survey_post', None)  # Extract nested survey_post data
-#
-#         # Handle nested SurveyPost creation
-#         if survey_post_data:
-#             survey_post_serializer = SurveyPostSerializer(data=survey_post_data)
-#             survey_post_serializer.is_valid(raise_exception=True)
-#             survey_post = survey_post_serializer.save()
-#             validated_data['survey_post'] = survey_post
-#
-#         survey_draft = SurveyDraft.objects.create(**validated_data)  # Create the draft
-#         return survey_draft
-#
-#     def update(self, instance, validated_data):
-#         """
-#         Update SurveyDraft and associated SurveyPost if provided.
-#         """
-#         survey_post_data = validated_data.pop('survey_post', None)
-#
-#         # Handle nested SurveyPost update
-#         if survey_post_data:
-#             survey_post_serializer = SurveyPostSerializer(instance.survey_post, data=survey_post_data)
-#             survey_post_serializer.is_valid(raise_exception=True)
-#             survey_post_serializer.save()
-#
-#         # Update main fields of SurveyDraft
-#         instance.answers = validated_data.get('answers', instance.answers)
-#         instance.save()
-#         return instance
+
+class SurveyOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SurveyOption
+        fields = ['id', 'option']
+
+
+class SurveyQuestionSerializer(serializers.ModelSerializer):
+    options = SurveyOptionSerializer(many=True, required=True)
+
+    class Meta:
+        model = SurveyQuestion
+        fields = ['id', 'question', 'multi_choice', 'options']
+
+
+class SurveyPostSerializer(PostSerializer):
+    questions = SurveyQuestionSerializer(many=True, required=False)
+
+    class Meta:
+        model = SurveyPost
+        fields = ['id', 'content', 'images', 'lock_comment', 'user', 'created_date', 'updated_date', 'end_time', 'survey_type', 'questions']
+
+
+
+class UserSurveyOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserSurveyOption
+        fields = ['id', 'user', 'survey_option']
+
+
+class SurveyDraftSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SurveyDraft
+        fields = ['id', 'survey_post', 'user', 'answers', 'drafted_at']

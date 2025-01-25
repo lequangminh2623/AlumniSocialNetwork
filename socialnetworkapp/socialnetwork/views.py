@@ -1,19 +1,19 @@
 import os
+
+from cloudinary.exceptions import Error
+from cloudinary.uploader import upload
 from django.shortcuts import render
-from django.db import IntegrityError
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action, permission_classes
-from rest_framework.generics import get_object_or_404, ListAPIView, RetrieveAPIView
+from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import MultiPartParser, JSONParser
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
-from .models import Alumni, Teacher, Post, Comment, Reaction, PostImage, SurveyPost, SurveyQuestion, SurveyOption, \
-    UserSurveyOption, SurveyDraft
+from .models import Alumni, Teacher, Post, Comment, PostImage, SurveyPost, SurveyQuestion, SurveyOption
 from .perms import AdminPermission, OwnerPermission, AlumniPermission
 from .serializers import AlumniSerializer, TeacherSerializer, ChangePasswordSerializer, PostSerializer, \
-    PostImageSerializer, CommentSerializer, SurveyPostSerializer, SurveyQuestionSerializer, SurveyOptionSerializer, \
-    UserSerializer, SurveyDraftSerializer
+    PostImageSerializer, CommentSerializer, SurveyPostSerializer, UserSerializer, SurveyDraftSerializer
 from .paginators import Pagination
 from django.core.mail import send_mail
 
@@ -60,9 +60,10 @@ class PostImageViewSet(viewsets.ViewSet, generics.ListAPIView):
     serializer_class = PostImageSerializer
 
 
-class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIView, generics.DestroyAPIView):
+class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIView):
     queryset = Post.objects.filter(active=True)
     serializer_class = PostSerializer
+    parser_classes = [JSONParser, MultiPartParser, ]
 
     def get_permissions(self):
         if self.action == 'create':
@@ -81,10 +82,20 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         post = Post.objects.create(content=content, user=request.user)
 
         for image in images:
-            PostImage.objects.create(post=post, image=image)
+            try:
+                upload_result = upload(image, folder='MangXaHoi')
+                image_url = upload_result.get('secure_url')
+                PostImage.objects.create(post=post, image=image_url)
+            except Error as e:
+                return Response({"error": f"Lỗi đăng bài: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(post)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, pk=None):
+        post = get_object_or_404(Post, pk=pk)
+        post.soft_delete()
+        return Response({'message': 'Bài viết đã được xóa thành công.'}, status=status.HTTP_204_NO_CONTENT)
 
     @action(methods=['post'], url_path='comment', detail=True, permission_classes=[IsAuthenticated])
     def create_comment(self, request, pk=None):
@@ -105,34 +116,42 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
 
     @action(methods=['patch'], url_path='lock-unlock-comment', detail=True, permission_classes = [IsAuthenticated])
     def lock_unlock_comments(self, request, pk=None):
-        post = get_object_or_404(Post, pk=pk, user=request.user)
+        post = get_object_or_404(Post, pk=pk)
         post.lock_comment = not post.lock_comment
         post.save()
         return Response({'message': 'Cập nhật trạng thái bình luận của bài đăng thành công.'})
 
 
-class CommentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPIView):
+class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Comment.objects.filter(active=True)
     serializer_class = CommentSerializer
+    parser_classes = [JSONParser, MultiPartParser, ]
 
     def get_permissions(self):
         if self.action == 'create':
             permission_classes = [IsAuthenticated]
-        elif self.action == 'destroy':
-            permission_classes = [OwnerPermission, AdminPermission]
         elif self.action == 'partial_update':
+            permission_classes = [OwnerPermission]
+        elif self.action == 'update':
             permission_classes = [OwnerPermission]
         else:
             permission_classes = [AllowAny]
         return [permission() for permission in permission_classes]
 
     def update(self, request, pk=None):
-        comment = get_object_or_404(Comment, id=pk, user=request.user)
+        comment = get_object_or_404(Comment, id=pk)
         serializer = CommentSerializer(comment, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response({'message': 'Chỉnh sửa bình luận thành công.'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete_comment(self, request, pk=None):
+        comment = get_object_or_404(Comment, id=pk)
+        if comment.post.user == request.user or comment.user == request.user or request.user.role == 0:
+            comment.soft_delete()
+            return Response({'message': 'Xóa bình luận thành công.'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'message': 'Bạn không có quyền xóa bình luận này.'}, status=status.HTTP_403_FORBIDDEN)
 
     @action(methods=['post'], detail=True, url_path='reply', permission_classes=[IsAuthenticated])
     def reply_comment(self, request, pk=None):
@@ -142,6 +161,7 @@ class CommentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPI
             serializer.save(user=request.user, post=comment.post, parent=comment)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 # class ReactionViewSet(viewsets.ViewSet, generics.CreateAPIView):
 #     queryset = Reaction.objects.all()
@@ -158,6 +178,10 @@ class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
     @action(methods=['get'], url_path='unverified', detail=False, permission_classes=[AdminPermission])
     def unverified_alumni(self, request):
         queryset = self.queryset.filter(is_verified=False)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         serializer = self.serializer_class(queryset, many=True)
         return Response(serializer.data)
 
@@ -201,8 +225,13 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     @action(methods=['get'], url_path='expired', detail=False)
     def expired_password_teachers(self, request):
-        expired_teachers = [teacher for teacher in self.queryset if teacher.is_password_change_expired() == True]
-        serializer = self.serializer_class(expired_teachers, many=True)
+        queryset = self.get_queryset().filter(is_password_change_expired=True)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     @action(methods=['patch'], url_path='reset', detail=True)
@@ -238,123 +267,83 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
         )
 
 
-# class SurveyPostViewSet(viewsets.ViewSet):
-#     queryset = SurveyPost.objects.filter(active=True)
-#     serializer_class = SurveyPostSerializer
-#
-#     def get_permissions(self):
-#         if self.action == 'create':
-#             permission_classes = [AdminPermission]
-#         elif self.action == 'partial_update':
-#             permission_classes = [OwnerPermission]
-#         else:
-#             permission_classes = [AllowAny]
-#         return [permission() for permission in permission_classes]
-#
-#     def create(self, request):
-#         serializer = SurveyPostSerializer(data=request.data)
-#         if serializer.is_valid():
-#             survey_post = serializer.save(user=request.user)
-#             images = request.data.get('images', [])
-#             questions = request.data.get('questions', [])
-#
-#             for image in images:
-#                 PostImage.objects.create(post=survey_post, image=image)
-#
-#             for question in questions:
-#                 survey_question = SurveyQuestion.objects.create(survey_post=survey_post, **question)
-#                 for option in question.get('options', []):
-#                     SurveyOption.objects.create(survey_question=survey_question, **option)
-#
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def update(self, request, pk=None):
-#         try:
-#             survey_post = SurveyPost.objects.get(pk=pk)
-#         except SurveyPost.DoesNotExist:
-#             return Response(status=status.HTTP_404_NOT_FOUND)
-#
-#         serializer = SurveyPostSerializer(survey_post, data=request.data)
-#         if serializer.is_valid():
-#             survey_post = serializer.save()
-#
-#             images = request.data.get('images', [])
-#             questions = request.data.get('questions', [])
-#
-#             PostImage.objects.filter(post=survey_post).delete()
-#             SurveyQuestion.objects.filter(survey_post=survey_post).delete()
-#             SurveyOption.objects.filter(survey_question__survey_post=survey_post).delete()
-#
-#             for image in images:
-#                 PostImage.objects.create(post=survey_post, image=image)
-#
-#             for question_data in questions:
-#                 question = SurveyQuestion.objects.create(survey_post=survey_post, **question_data)
-#                 for option_data in question_data.get('options', []):
-#                     SurveyOption.objects.create(survey_question=question, **option_data)
-#
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def retrieve(self, request, pk=None):
-#         try:
-#             survey_post = SurveyPost.objects.get(pk=pk, active=True)
-#         except SurveyPost.DoesNotExist:
-#             return Response({"error": "SurveyPost not found."}, status=status.HTTP_404_NOT_FOUND)
-#         serializer = SurveyPostSerializer(survey_post)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-#
-#     @action(detail=True, methods=['post'], permission_classes=[AlumniPermission])
-#     def draft(self, request, pk=None):
-#         survey_post = self.get_object()
-#         user = request.user
-#         answers = request.data.get('answers', {})
-#
-#         draft, created = SurveyDraft.objects.update_or_create(
-#             survey_post=survey_post,
-#             user=user,
-#             defaults={'answers': answers}
-#         )
-#         serializer = SurveyDraftSerializer(draft)
-#
-#         send_mail(
-#             subject='Nhắc nhở hoàn thành khảo sát',
-#             message=f"""
-#                             Chào {user.first_name},
-#
-#                             Bạn đã lưu nháp một khảo sát. Vui lòng truy cập đường link sau để tiếp tục:
-#
-#                             f"http://127.0.0.1:8000/survey/{pk}/resume/?email={user.email}"
-#
-#                             Cảm ơn bạn đã dành thời gian tham gia khảo sát!
-#
-#                             Trân Trọng,
-#                             Đội ngũ Admin
-#                         """,
-#             from_email=os.getenv('EMAIL_SEND'),
-#             recipient_list=[user.email],
-#             fail_silently=False,
-#         )
-#
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-#
-#     @action(detail=True, methods=['get'], url_path='resume/', permission_classes=[AlumniPermission])  # bỏ token khỏi url
-#     def resume(self, request, pk=None):
-#         email = request.GET.get('email')
-#         if not email:
-#             return Response({"status": "error", "message": "Email parameter is required."},
-#                             status=status.HTTP_400_BAD_REQUEST)
-#         try:
-#             draft = SurveyDraft.objects.get(survey_post_id=pk, user__email=email)
-#         except SurveyDraft.DoesNotExist:
-#             return Response({"status": "error", "message": "Draft not found."}, status=status.HTTP_404_NOT_FOUND)
-#
-#         survey_post = draft.survey_post
-#         survey_post_serializer = SurveyPostSerializer(survey_post)
-#         draft_serializer = SurveyDraftSerializer(draft)
-#         return Response({
-#             "status": "success",
-#             "survey": survey_post_serializer.data,
-#             "draft": draft_serializer.data
-#         })
+class SurveyPostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIView):
+    queryset = SurveyPost.objects.filter(active=True)
+    serializer_class = SurveyPostSerializer
+    parser_classes = [JSONParser, MultiPartParser]
+
+
+    def create(self, request):
+        content = request.data.get('content')
+        images = request.FILES.getlist('images')
+        survey_type = request.data.get('survey_type')
+        end_time = request.data.get('end_time')
+        questions_data = request.data.get('questions')
+
+        survey_post = SurveyPost.objects.create(
+            content=content, user=request.user, survey_type=survey_type, end_time=end_time
+        )
+
+        for image in images:
+            try:
+                upload_result = upload(image, folder='MangXaHoi')
+                image_url = upload_result.get('secure_url')
+                PostImage.objects.create(post=survey_post, image=image_url)
+            except Error as e:
+                return Response({"error": f"Lỗi đăng bài: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(survey_post)
+
+        for question_data in questions_data:
+            options_data = question_data.pop('options', [])
+            question = SurveyQuestion.objects.create(survey_post=survey_post, **question_data)
+            for option_data in options_data:
+                SurveyOption.objects.create(survey_question=question, **option_data)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    # def update(self, request, pk=None):
+    #     survey_post = self.get_object()
+    #     serializer = self.get_serializer(survey_post, data=request.data, partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data)
+    #
+    #     questions_data = validated_data.pop('questions', [])
+    #     instance = super().update(instance, validated_data)
+    #
+    #     existing_questions = {question.id: question for question in instance.questions.all()}
+    #     question_ids = [q.get('id') for q in questions_data if q.get('id')]
+    #
+    #     for question_data in questions_data:
+    #         question_id = question_data.get('id')
+    #         if question_id and question_id in existing_questions:
+    #             question_instance = existing_questions[question_id]
+    #             options_data = question_data.pop('options', [])
+    #             for attr, value in question_data.items():
+    #                 setattr(question_instance, attr, value)
+    #             question_instance.save()
+    #
+    #             existing_options = {option.id: option for option in question_instance.options.all()}
+    #             option_ids = [o.get('id') for o in options_data if o.get('id')]
+    #
+    #             for option_data in options_data:
+    #                 option_id = option_data.get('id')
+    #                 if option_id and option_id in existing_options:
+    #                     option_instance = existing_options[option_id]
+    #                     for attr, value in option_data.items():
+    #                         setattr(option_instance, attr, value)
+    #                     option_instance.save()
+    #                 else:
+    #                     SurveyOption.objects.create(survey_question=question_instance, **option_data)
+    #
+    #             options_to_delete = set(existing_options.keys()) - set(option_ids)
+    #             SurveyOption.objects.filter(id__in=options_to_delete).delete()
+    #         else:
+    #             SurveyQuestion.objects.create(survey_post=instance, **question_data)
+    #
+    #     questions_to_delete = set(existing_questions.keys()) - set(question_ids)
+    #     SurveyQuestion.objects.filter(id__in=questions_to_delete).delete()
+    #
+    #     return instance
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
