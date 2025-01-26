@@ -91,6 +91,7 @@ class AlumniSerializer(ModelSerializer):
     def create(self, validated_data):
         user_data = validated_data.pop('user')
         user_data['role'] = 1
+        user_data['is_active'] = False
         avatar = user_data.pop('avatar', None)
         cover = user_data.pop('cover', None)
         password = user_data.get('password')
@@ -120,7 +121,8 @@ class AlumniSerializer(ModelSerializer):
             email=user_data.get('email'),
             avatar=user_data.get('avatar'),
             cover=user_data.get('cover'),
-            role=user_data.get('role')
+            role=user_data.get('role'),
+            is_active=user_data.get('is_active')
         )
 
         alumni = Alumni.objects.create(user=user, **validated_data)
