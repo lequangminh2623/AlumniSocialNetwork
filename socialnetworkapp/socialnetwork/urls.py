@@ -8,7 +8,7 @@ router.register('teacher', views.TeacherViewSet, basename='teacher')
 router.register('user', views.UserViewSet, basename='user')
 router.register('post', views.PostViewSet, basename='post')
 router.register('comment', views.CommentViewSet, basename='comment')
-router.register('survey', views.SurveyPostViewSet, basename='survey')
+router.register(r'survey', views.SurveyPostViewSet, basename='survey')
 # router.register('reaction', views.ReactionViewSet, basename='reaction')
 
 
