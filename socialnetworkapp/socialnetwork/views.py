@@ -86,6 +86,33 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    def update(self,request, pk=None):
+        post = get_object_or_404(Post, pk=pk, active=True)
+        self.permission_classes = [OwnerPermission | AdminPermission]
+        self.check_object_permissions(request, post)
+
+        content = request.data.get('content', post.content)
+        images = request.FILES.getlist('images')
+
+        if images:
+            PostImage.objects.filter(post=post).delete()
+            for image in images:
+                try:
+                    upload_result = upload(image, folder='MangXaHoi')
+                    image_url = upload_result.get('secure_url')
+                    PostImage.objects.create(post=post, image=image_url)
+                    post.content=content
+                except Error as e:
+                    return Response({"error": f"Lỗi đăng ảnh: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            post.content=content
+            PostImage.objects.filter(post=post).delete()
+
+        post.save(update_fields=['content'])
+        serializer = self.get_serializer(post)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
     def destroy(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk, active=True)
         self.permission_classes = [OwnerPermission | AdminPermission]
@@ -178,11 +205,23 @@ class CommentViewSet(viewsets.ViewSet):
         comment = get_object_or_404(Comment, id=pk, active=True)
         self.permission_classes = [OwnerPermission]
         self.check_object_permissions(request, comment)
-        serializer = CommentSerializer(comment, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({'message': 'Chỉnh sửa bình luận thành công.'}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        content = request.data.get('content', comment.content)
+        image = request.FILES.get('image')
+
+        if image:
+            try:
+                upload_result = upload(image, folder='MangXaHoi')
+                image_url = upload_result.get('secure_url')
+                comment.image = image_url
+                comment.content = content
+            except Error as e:
+                return Response({"error": f"Lỗi đăng ảnh: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            comment.content = content
+            comment.image = None
+        comment.save(update_fields=['content', 'image'])
+        return Response({'message': 'Chỉnh sửa bình luận thành công.'}, status=status.HTTP_200_OK)
 
 
     def destroy(self, request, pk=None):
