@@ -10,7 +10,8 @@ from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
-from .models import Alumni, Teacher, Post, Comment, PostImage, SurveyPost, SurveyQuestion, SurveyOption, Reaction
+from .models import Alumni, Teacher, Post, Comment, PostImage, SurveyPost, SurveyQuestion, SurveyOption, SurveyDraft, \
+    UserSurveyOption, Reaction
 from .perms import AdminPermission, OwnerPermission, AlumniPermission
 from .serializers import AlumniSerializer, TeacherSerializer, ChangePasswordSerializer, PostSerializer, \
     PostImageSerializer, CommentSerializer, SurveyPostSerializer, UserSerializer, SurveyDraftSerializer, ReactionSerializer
@@ -297,13 +298,15 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
             {"message": f"Tài khoản {teacher.user.username} đã đổi mật khẩu hoặc chưa hết thời gian đổi mật khẩu."},status=status.HTTP_400_BAD_REQUEST)
 
 
-class SurveyPostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIView):
+class SurveyPostViewSet(viewsets.ViewSet):
     queryset = SurveyPost.objects.filter(active=True)
     serializer_class = SurveyPostSerializer
     parser_classes = [JSONParser, MultiPartParser]
 
-
     def create(self, request):
+        self.permission_classes = [AdminPermission]
+        self.check_permissions(request)
+
         content = request.data.get('content')
         images = request.FILES.getlist('images')
         survey_type = request.data.get('survey_type')
@@ -320,7 +323,7 @@ class SurveyPostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.Lis
             except Error as e:
                 return Response({"error": f"Lỗi đăng bài: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = self.get_serializer(survey_post)
+        serializer = SurveyPostSerializer(survey_post)
 
         for question_data in questions_data:
             options_data = question_data.pop('options', [])
@@ -330,48 +333,174 @@ class SurveyPostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.Lis
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    # def update(self, request, pk=None):
-    #     survey_post = self.get_object()
-    #     serializer = self.get_serializer(survey_post, data=request.data, partial=True)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data)
-    #
-    #     questions_data = validated_data.pop('questions', [])
-    #     instance = super().update(instance, validated_data)
-    #
-    #     existing_questions = {question.id: question for question in instance.questions.all()}
-    #     question_ids = [q.get('id') for q in questions_data if q.get('id')]
-    #
-    #     for question_data in questions_data:
-    #         question_id = question_data.get('id')
-    #         if question_id and question_id in existing_questions:
-    #             question_instance = existing_questions[question_id]
-    #             options_data = question_data.pop('options', [])
-    #             for attr, value in question_data.items():
-    #                 setattr(question_instance, attr, value)
-    #             question_instance.save()
-    #
-    #             existing_options = {option.id: option for option in question_instance.options.all()}
-    #             option_ids = [o.get('id') for o in options_data if o.get('id')]
-    #
-    #             for option_data in options_data:
-    #                 option_id = option_data.get('id')
-    #                 if option_id and option_id in existing_options:
-    #                     option_instance = existing_options[option_id]
-    #                     for attr, value in option_data.items():
-    #                         setattr(option_instance, attr, value)
-    #                     option_instance.save()
-    #                 else:
-    #                     SurveyOption.objects.create(survey_question=question_instance, **option_data)
-    #
-    #             options_to_delete = set(existing_options.keys()) - set(option_ids)
-    #             SurveyOption.objects.filter(id__in=options_to_delete).delete()
-    #         else:
-    #             SurveyQuestion.objects.create(survey_post=instance, **question_data)
-    #
-    #     questions_to_delete = set(existing_questions.keys()) - set(question_ids)
-    #     SurveyQuestion.objects.filter(id__in=questions_to_delete).delete()
-    #
-    #     return instance
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def update(self, request, pk=None):
+        self.permission_classes = [OwnerPermission]
+        survey_post = get_object_or_404(SurveyPost, pk=pk)
+        self.check_object_permissions(request, survey_post)
+
+        content = request.data.get('content', survey_post.content)
+        images = request.FILES.getlist('images')
+        survey_type = request.data.get('survey_type', survey_post.survey_type)
+        end_time = request.data.get('end_time', survey_post.end_time)
+        questions_data = request.data.get('questions', [])
+
+        survey_post.content = content
+        survey_post.survey_type = survey_type
+        survey_post.end_time = end_time
+        survey_post.save()
+
+        existing_images = {image.image: image for image in survey_post.images.all()}
+        new_image_urls = []
+
+        for image in images:
+            try:
+                upload_result = upload(image, folder='MangXaHoi')
+                image_url = upload_result.get('secure_url')
+                new_image_urls.append(image_url)
+                if image_url not in existing_images:
+                    PostImage.objects.create(post=survey_post, image=image_url)
+            except Error as e:
+                return Response({"error": f"Lỗi cập nhật hình ảnh: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Remove deleted images
+        images_to_delete = set(existing_images.keys()) - set(new_image_urls)
+        PostImage.objects.filter(image__in=images_to_delete).delete()
+        existing_questions = {q.id: q for q in survey_post.questions.all()}
+        question_ids = [int(q.get('id')) for q in questions_data if q.get('id')]
+
+        for question_data in questions_data:
+            options_data = question_data.pop('options', [])
+            question_id = int(question_data.get('id'))
+            if question_id and question_id in existing_questions:
+                question_instance = existing_questions[question_id]
+                for attr, value in question_data.items():
+                    setattr(question_instance, attr, value)
+                question_instance.save()
+                existing_options = {o.id: o for o in question_instance.options.all()}
+                option_ids = [int(o.get('id')) for o in options_data if o.get('id')]
+                for option_data in options_data:
+                    option_id = int(option_data.get('id'))
+                    if option_id and option_id in existing_options:
+                        option_instance = existing_options[option_id]
+                        for attr, value in option_data.items():
+                            setattr(option_instance, attr, value)
+                        option_instance.save()
+                    else:
+                        SurveyOption.objects.create(survey_question=question_instance, **option_data)
+                options_to_delete = set(existing_options.keys()) - set(option_ids)
+                SurveyOption.objects.filter(id__in=options_to_delete).delete()
+            else:
+                SurveyQuestion.objects.create(survey_post=survey_post, **question_data)
+        questions_to_delete = set(existing_questions.keys()) - set(question_ids)
+        SurveyQuestion.objects.filter(id__in=questions_to_delete).delete()
+
+        serializer = SurveyPostSerializer(survey_post)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def retrieve(self, request, pk=None):
+        survey_post = get_object_or_404(SurveyPost, pk=pk)
+        questions = survey_post.questions.all()
+        data = []
+        for question in questions:
+            options = question.options.all().values('id', 'option')
+            data.append({
+                'id': question.id,
+                'question': question.question,
+                'multi_choice': question.multi_choice,
+                'options': list(options)
+            })
+        return Response(data, status=status.HTTP_200_OK)
+
+
+    @action(detail=True, url_path='draft', methods=['post'], permission_classes=[AlumniPermission])
+    def draft(self, request, pk=None):
+        self.check_permissions(request)
+
+        # Kiểm tra nếu người dùng đã từng trả lời khảo sát này
+        existing_answers = UserSurveyOption.objects.filter(user=request.user, survey_option__survey_question__survey_post=pk)
+        if existing_answers.exists():
+            return Response({"error": "You had completed this survey."}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = request.data
+        survey_post = get_object_or_404(SurveyPost, pk=pk)
+        answers = data.get('answers', {})
+
+        formatted_answers = [{'question_id': key, 'selected_options': value} for key, value in answers.items()]
+        draft_data = {
+            'survey_post': survey_post,
+            'user': request.user.id,
+            'answers': formatted_answers
+        }
+
+        serializer = SurveyDraftSerializer(data=draft_data)
+        if serializer.is_valid():
+            serializer.save()
+
+            draft_url = 'link'
+
+            send_mail(
+                subject='Nhắc nhở hoàn thành khảo sát',
+                message=f"""
+                        Chào {request.user.first_name},
+
+                        Bạn đã lưu nháp một khảo sát. Vui lòng truy cập đường dẫn sau để tiếp tục:
+
+                        {draft_url}
+
+                        Cảm ơn đã dành thời gian thực hiện khảo sát!
+
+                        Trân Trọng,
+                        Đội ngũ Admin
+                    """,
+                from_email=os.getenv('EMAIL_SEND'),
+                recipient_list=[request.user.email],
+                fail_silently=False,
+            )
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, url_path='resume', methods=['get'], permission_classes=[OwnerPermission])
+    def resume_survey(self, request, pk=None):
+        try:
+            draft = get_object_or_404(SurveyDraft, survey_post_id=pk, user=request.user)
+
+            self.check_object_permissions(request, draft)
+
+            return Response({
+                "answers": draft.answers
+            }, status=status.HTTP_200_OK)
+        except SurveyDraft.DoesNotExist:
+            return Response({"error": "Draft not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, url_path='submit', methods=['post'], permission_classes=[AlumniPermission])
+    def submit_survey(self, request, pk=None):
+        self.check_permissions(request)
+        data = request.data
+        user = request.user
+        survey_post = get_object_or_404(SurveyPost, pk=pk)
+        answers = data.get('answers', {})
+
+        # Kiểm tra nếu người dùng đã từng trả lời khảo sát này
+        existing_answers = UserSurveyOption.objects.filter(user=user, survey_option__survey_question__survey_post=pk)
+        if existing_answers.exists():
+            return Response({"error": "You had completed this survey."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Lấy tất cả các câu hỏi của bài khảo sát
+        required_question_ids = set(survey_post.questions.values_list('id', flat=True))
+        answered_question_ids = set(int(question_id) for question_id in answers.keys())
+
+        # Kiểm tra xem người dùng đã trả lời tất cả các câu hỏi chưa
+        if required_question_ids - answered_question_ids:
+            return Response({"error": "You must answer all questions."}, status=status.HTTP_400_BAD_REQUEST)
+
+        for question_id, selected_option_ids in answers.items():
+            for option_id in selected_option_ids:
+                UserSurveyOption.objects.create(user=user, survey_option_id=option_id)
+
+        # Xóa bản nháp nếu tồn tại
+        SurveyDraft.objects.filter(user=user, survey_post=survey_post).delete()
+
+        return Response({"message": "Survey submitted successfully."}, status=status.HTTP_201_CREATED)

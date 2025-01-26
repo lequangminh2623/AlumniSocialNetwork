@@ -18,7 +18,7 @@ class BaseModel(models.Model):
     def soft_delete(self, using=None, keep_parents=False):
         self.deleted_date = timezone.now()
         self.active = False
-        self.save()
+        self.save(update_fields=['deleted_date', 'active'])
 
 
 
