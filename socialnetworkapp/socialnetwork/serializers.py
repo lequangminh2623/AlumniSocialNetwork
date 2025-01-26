@@ -3,7 +3,7 @@ import os
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError, Serializer, CharField
 from .models import User, Alumni, Teacher, Post, PostImage, Comment, SurveyOption, SurveyQuestion, SurveyPost, \
-    SurveyDraft, UserSurveyOption
+    SurveyDraft, UserSurveyOption, Reaction
 from django.core.mail import send_mail
 from django.utils import timezone
 from cloudinary.uploader import upload
@@ -59,12 +59,13 @@ class CommentSerializer(ModelSerializer):
 
 
 
-# class ReactionSerializer(ModelSerializer):
-#     user = StringRelatedField(read_only=True)
-#
-#     class Meta:
-#         model = Reaction
-#         fields = ['id', 'reaction', 'user', 'post', 'created_date', 'updated_date']
+class ReactionSerializer(ModelSerializer):
+    user = UserSerializer(read_only=True)
+    post = PostSerializer(read_only=True)
+
+    class Meta:
+        model = Reaction
+        fields = ['id', 'reaction', 'user', 'post', 'created_date', 'updated_date']
 
 
 

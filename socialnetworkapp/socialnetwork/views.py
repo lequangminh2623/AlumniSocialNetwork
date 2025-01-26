@@ -1,5 +1,5 @@
 import os
-
+from django.db import IntegrityError
 from cloudinary.exceptions import Error
 from cloudinary.uploader import upload
 from django.shortcuts import render
@@ -10,10 +10,10 @@ from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
-from .models import Alumni, Teacher, Post, Comment, PostImage, SurveyPost, SurveyQuestion, SurveyOption
+from .models import Alumni, Teacher, Post, Comment, PostImage, SurveyPost, SurveyQuestion, SurveyOption, Reaction
 from .perms import AdminPermission, OwnerPermission, AlumniPermission
 from .serializers import AlumniSerializer, TeacherSerializer, ChangePasswordSerializer, PostSerializer, \
-    PostImageSerializer, CommentSerializer, SurveyPostSerializer, UserSerializer, SurveyDraftSerializer
+    PostImageSerializer, CommentSerializer, SurveyPostSerializer, UserSerializer, SurveyDraftSerializer, ReactionSerializer
 from .paginators import Pagination
 from django.core.mail import send_mail
 
@@ -49,8 +49,7 @@ class UserViewSet(viewsets.ViewSet):
                 teacher.password_reset_time = None
                 teacher.save()
 
-            return Response({"message": "Mật khẩu đã được thay đổi thành công."},
-                            status=status.HTTP_200_OK)
+            return Response({"message": "Mật khẩu đã được thay đổi thành công."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -100,26 +99,66 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
     @action(methods=['post'], url_path='comment', detail=True, permission_classes=[IsAuthenticated])
     def create_comment(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk)
+        content = request.data.get('content')
+        image = request.FILES.get('image')
 
-        serializer = CommentSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user, post=post)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        image_url = None
+        if image:
+            try:
+                upload_result = upload(image, folder='MangXaHoi')
+                image_url = upload_result.get('secure_url')
+            except Error as e:
+                return Response({"error": f"Lỗi đăng ảnh: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        comment = Comment.objects.create(content=content, image=image_url, user=request.user, post=post)
+        serializer = CommentSerializer(comment)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(methods=['get'], url_path='comments', detail=True)
     def get_comments(self, request, pk=None):
         comments = Comment.objects.filter(post=pk, active=True)
         serializer = CommentSerializer(comments, many=True)
-
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(methods=['post'], url_path='react', detail=True, permission_classes=[IsAuthenticated])
+    def react_post(self, request, pk=None):
+        post = get_object_or_404(Post, pk=pk)
+        reaction_type = request.data.get("reaction")
+
+        try:
+            reaction = Reaction.objects.filter(user=request.user, post=post).first()
+            if not reaction_type:
+                if reaction:
+                    reaction.delete()
+                    return Response({"message": "Hủy react thành công."}, status=status.HTTP_200_OK)
+                else:
+                    return Response({"message": "Không có react nào để hủy."}, status=status.HTTP_200_OK)
+            else:
+                if reaction:
+                    reaction.reaction = int(reaction_type)
+                    reaction.save()
+                    return Response({"message": "React thành công."}, status=status.HTTP_200_OK)
+                else:
+                    Reaction.objects.create(user=request.user, post=post, reaction=int(reaction_type))
+                    return Response({"message": "React thành công."}, status=status.HTTP_201_CREATED)
+
+        except IntegrityError as e:
+            return Response({"error": f"Lỗi khi thực hiện react: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @action(methods=['get'], url_path='reacts', detail=True)
+    def get_reactions(self, request, pk=None):
+        reactions = Reaction.objects.filter(post=pk, active=True)
+        serializer = ReactionSerializer(reactions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
     @action(methods=['patch'], url_path='lock-unlock-comment', detail=True, permission_classes = [IsAuthenticated])
     def lock_unlock_comments(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk)
         post.lock_comment = not post.lock_comment
         post.save()
-        return Response({'message': 'Cập nhật trạng thái bình luận của bài đăng thành công.'})
+        return Response({'message': 'Cập nhật trạng thái bình luận của bài đăng thành công.'}, status=status.HTTP_200_OK)
 
 
 class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -163,10 +202,9 @@ class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# class ReactionViewSet(viewsets.ViewSet, generics.CreateAPIView):
-#     queryset = Reaction.objects.all()
-#     serializer_class = ReactionSerializer
-#     permission_classes = [IsAuthenticated]
+class ReactionViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = Reaction.objects.filter(active=True)
+    serializer_class = ReactionSerializer
 
 
 class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -190,8 +228,7 @@ class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
         alumni = get_object_or_404(Alumni, pk=pk)
 
         if alumni.is_verified:
-            return Response({"error": "Tài khoản này đã được duyệt."},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Tài khoản này đã được duyệt."}, status=status.HTTP_400_BAD_REQUEST)
 
         alumni.is_verified = True
         alumni.save()
@@ -210,10 +247,7 @@ class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
             fail_silently=False,
         )
 
-        return Response(
-            {"message": "Duyệt tài khoản thành công.", "alumni_id": alumni.id},
-            status=status.HTTP_200_OK
-        )
+        return Response({"message": "Duyệt tài khoản thành công.", "alumni_id": alumni.id}, status=status.HTTP_200_OK)
 
 
 class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -257,14 +291,10 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
                 fail_silently=False,
             )
 
-            return Response({
-                "message": f"Thời gian đổi mật khẩu đã được đặt lại cho {teacher.user.username}."
-            }, status=status.HTTP_200_OK)
+            return Response({"message": f"Thời gian đổi mật khẩu đã được đặt lại cho {teacher.user.username}."}, status=status.HTTP_200_OK)
 
         return Response(
-            {"message": f"Tài khoản {teacher.user.username} đã đổi mật khẩu hoặc chưa hết thời gian đổi mật khẩu."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+            {"message": f"Tài khoản {teacher.user.username} đã đổi mật khẩu hoặc chưa hết thời gian đổi mật khẩu."},status=status.HTTP_400_BAD_REQUEST)
 
 
 class SurveyPostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIView):
@@ -280,9 +310,7 @@ class SurveyPostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.Lis
         end_time = request.data.get('end_time')
         questions_data = request.data.get('questions')
 
-        survey_post = SurveyPost.objects.create(
-            content=content, user=request.user, survey_type=survey_type, end_time=end_time
-        )
+        survey_post = SurveyPost.objects.create(content=content, user=request.user, survey_type=survey_type, end_time=end_time)
 
         for image in images:
             try:
