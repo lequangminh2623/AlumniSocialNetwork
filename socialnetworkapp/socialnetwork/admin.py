@@ -1,8 +1,13 @@
+from idlelib.query import Query
+
+from celery.bin.logtool import stats
 from django.contrib import admin
 from django.http import JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import path
 from django.db.models import Count
+from django.db.models import Q
+from zope.interface import named
 
 from .models import *
 
@@ -16,8 +21,48 @@ class MyAdminSite(admin.AdminSite):
         urls = super().get_urls()
         custom_urls = [
             path('survey-report/', self.admin_view(self.survey_report), name='survey-report'),
+            path('stats/', self.admin_view(self.stats), name='stats'),
         ]
         return custom_urls + urls
+
+
+    def stats(self, request):
+
+        year = request.GET.get('year')
+        month = request.GET.get('month')
+        quarter_year = request.GET.get('quarter_year')
+        quarter = request.GET.get('quarter')
+
+        filters = {}
+
+        if year:
+            filters['date_joined__year'] = int(year)
+        if month:
+            try:
+                month_value = month.split('-')[1]
+                filters['date_joined__month'] = int(month_value)
+            except (ValueError, IndexError):
+                pass
+
+        if quarter_year and quarter:
+            quarter_month_map = {
+                1: [1, 3],
+                2: [4, 6],
+                3: [7, 9],
+                4: [10, 12],
+            }
+            start_month, end_month = quarter_month_map[int(quarter)]
+            filters['date_joined__year'] = int(quarter_year)
+            filters['date_joined__month__gte'] = start_month
+            filters['date_joined__month__lte'] = end_month
+
+        users = User.objects.filter(**filters)
+
+        stats = users.values('role').annotate(total=Count('id'), active=Count('id', filter=Q(is_active=True)))
+        stats_with_role_names = [{**stat, 'role_name': Role(stat['role']).name.capitalize()} for stat in stats]
+        return TemplateResponse(request,'admin/stats.html',{
+            'stats' : stats_with_role_names
+        })
 
     def survey_report(self, request, *args, **kwargs):
         surveys = SurveyPost.objects.all()

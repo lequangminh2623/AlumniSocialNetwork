@@ -212,10 +212,3 @@ class Comment(Interaction):
         if self.parent:
             return f"Reply to {self.parent.id} - {self.content[:30]}"
         return self.content[:30]
-
-    def can_edit_or_delete(self, user):
-        return self.user == user  # Chỉ người viết mới có quyền xóa hoặc sửa
-
-    def can_owner_delete(self, post_user):
-        return self.post.user == post_user  # Chỉ chủ bài viết mới được xóa comment
-
