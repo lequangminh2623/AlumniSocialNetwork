@@ -1,9 +1,14 @@
 {% extends "admin/base_site.html" %}
 {% block content %}
-<h1 style="text-align: center; font-weight: bold">Báo cáo khảo sát</h1>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/js/select2.min.js"></script>
+<h1 style="text-align: center; font-weight: bold">THỐNG KÊ KẾT QUẢ KHẢO SÁT</h1>
 <form method="get" action="{% url 'admin:survey-report' %}">
     <label for="survey-select">Chọn khảo sát:</label>
-    <select name="pk" id="survey-select">
+    <select name="pk" id="survey-select" class="searchable-select">
         {% for survey in surveys %}
         <option value="{{ survey.id }}" {% if survey.id == survey_post.id %}selected{% endif %}>
             ID {{survey.id }}: {{ survey.content }}
@@ -11,7 +16,6 @@
         {% endfor %}
     </select>
 
-    <!-- Nút gửi form -->
     <button type="submit">Xem báo cáo</button>
 </form>
 {% if survey_images %}
@@ -29,86 +33,158 @@
     google.charts.setOnLoadCallback(fetchSurveyData);
 
     function fetchSurveyData() {
-    fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(response => response.json())
-        .then(data => {
-            data.data.forEach((question, index) => {
-                // Tạo div bao ngoài cho mỗi câu hỏi
-                let questionDiv = document.createElement('div');
-                questionDiv.id = 'question_' + index;
-                questionDiv.classList.add('question-container'); // Thêm class
-                // Tạo màu nền ngẫu nhiên cho mỗi câu hỏi
+        fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(response => response.json())
+            .then(data => {
+                data.data.forEach((question, index) => {
+                    // Tạo div bao ngoài cho mỗi câu hỏi
+                    let questionDiv = document.createElement('div');
+                    questionDiv.id = 'question_' + index;
+                    questionDiv.classList.add('question-container'); // Thêm class
+                    document.getElementById('charts-container').appendChild(questionDiv);                let chartDiv = document.createElement('div');
+                    chartDiv.id = 'chart_container_' + index;
+                    chartDiv.classList.add('chart-container');
+                    questionDiv.appendChild(chartDiv);
 
-                document.getElementById('charts-container').appendChild(questionDiv);
+                    let chartInsideDiv = document.createElement('div');
+                    chartInsideDiv.id = 'chart_' + index;
+                    chartDiv.appendChild(chartInsideDiv);
 
-                let chartDiv = document.createElement('div');
-                chartDiv.id = 'chart_container_' + index;
-                chartDiv.classList.add('chart-container');
-                questionDiv.appendChild(chartDiv);
+                    drawChartOnResize(question, 'chart_' + index);
+                });
+            })
+            .catch(error => console.error('Error fetching data:', error));
+        }
 
-                let chartInsideDiv = document.createElement('div');
-                chartInsideDiv.id = 'chart_' + index;
-                chartDiv.appendChild(chartInsideDiv);
+        function generateRandomColors(numberOfColors) {
+            const colors = [];
+            for (let i = 0; i < numberOfColors; i++) {
+                const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+                colors.push(randomColor);
+            }
+            return colors;
+        }
 
-                drawChart(question, 'chart_' + index);
+        function drawChart(question, chartId) {
+            // Tạo dữ liệu cho biểu đồ
+            var chartData = [['Lựa chọn', 'Số lượt chọn']];
+            question.options.forEach(option => {
+                chartData.push([option.text, option.count]);
             });
-        })
-        .catch(error => console.error('Error fetching data:', error));
+            var totalAnswers = question.options.reduce((sum, option) => sum + option.count, 0);
+            let chartContainer = document.getElementById(chartId);
+
+            if (totalAnswers === 0) {
+                chartContainer.innerHTML = `
+                    <div style="text-align: center; font-size: 16px; color: #555;">
+                        <strong>${question.question}</strong>
+                        <p style="margin-top: 10px; font-style: italic;">Chưa có câu trả lời nào cho câu hỏi này.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            var dataTable = google.visualization.arrayToDataTable(chartData);
+            var options = {
+                title: `${question.question} (${totalAnswers} câu trả lời)`,
+                chartArea: {
+                    width: '80%', height: '70%', left: '20%', top: '20%'
+                },
+                legend: { position: 'right', textStyle: { fontSize: 12 } },
+                colors: generateRandomColors(question.options.length),
+                fontSize: 13,
+                titleTextStyle: {
+                    fontSize: 16,
+                    bold: true,
+                    color: 'black'
+                },
+                backgroundColor: 'transparent'
+            };
+
+            var chart;
+            if (question.multi_choice) {
+                chart = new google.visualization.BarChart(chartContainer);
+                options.hAxis = { title: 'Số lượt chọn' };
+                options.vAxis = { title: 'Lựa chọn' };
+                options.legend = 'none';
+            } else {
+                chart = new google.visualization.PieChart(chartContainer);
+            }
+
+            chart.draw(dataTable, options);
+        }
+
+        function drawChartOnResize(question, chartId) {
+            drawChart(question, chartId);
+
+            const debounceResize = debounce(() => drawChart(question, chartId), 200); // Giảm tần suất gọi lại
+            window.addEventListener('resize', debounceResize);
+        }
+
+        function debounce(func, delay) {
+            let timer;
+            return function (...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => func.apply(this, args), delay);
+            };
+
     }
 
-
-    function drawChart(question, chartId) {
-        var chartData = [['Lựa chọn', 'Số lượt chọn']];
-        question.options.forEach(option => {
-            chartData.push([option.text, option.count]);
+    document.addEventListener("DOMContentLoaded", function () {
+        // Khởi tạo Select2 trên phần tử có class "searchable-select"
+        $('#survey-select').select2({
+            placeholder: "Tìm kiếm khảo sát...", // Hiển thị placeholder
+            allowClear: true // Cho phép xóa chọn lựa
         });
-
-        var dataTable = google.visualization.arrayToDataTable(chartData);
-        var options = {
-            title: question.question,
-            chartArea: { width: '100%', height: '70%' },
-            legend: { position: 'right', textStyle: { fontName: 'Roboto', fontSize: 12 } },
-            colors: ['#4285F4', '#EA4335', '#FBBC05', '#34A853', '#7B1FA2', '#009688'], // Thêm nhiều màu hơn
-            fontName: 'Roboto',
-            fontSize: 13,
-            titleTextStyle: { fontSize: 14, bold: true },
-            backgroundColor: 'f0f0f0'
-        };
-
-        var chart = new google.visualization.PieChart(document.getElementById(chartId));
-        chart.draw(dataTable, options);
-
-        let chartDiv = document.getElementById(chartId).parentNode;
-        chartDiv.classList.add('chart-container');
-    }
-
+    });
 </script>
 
 <style>
-    #survey-select {
-        display: inline-block;
-        width: auto;
-        max-width: 100%;
-        min-width: 150px;
-    }
     .chart-container {
-        width: 600px; /* Điều chỉnh chiều rộng cho phù hợp */
-        margin: 20px auto; /* Căn giữa và tạo khoảng cách */
-        padding: 20px; /* Khoảng cách bên trong vùng bao */
-        border: 1px solid #ddd; /* Đường viền */
-        border-radius: 8px; /* Bo góc */
-        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1); /* Đổ bóng nhẹ */
-        display: flex; /* Sử dụng flexbox để sắp xếp */
-        align-items: center; /* Căn giữa theo chiều dọc */
+        width: 70%;
+        margin: 20px auto;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
         justify-content: center;
+        background-color: #f0f0f0;
     }
 
     .chart-container > div {
-        flex: 1; /* Chia đều không gian cho biểu đồ và chú thích */
+        flex: 1;
         text-align: center;
     }
-    .chart-container > div:first-child{ /* Biểu đồ */
-        max-width: 400px; /* giới hạn chiều rộng biểu đồ */
+
+    button[type="submit"] {
+        background-color: #4285F4;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 13px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    button[type="submit"]:hover {
+        background-color: #357AE8;
+    }
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #333;
+        font-size: 18px;
+    }
+    form {
+        margin: 20px 50px;
+        padding: 20px;
     }
 </style>
 {% endblock %}
