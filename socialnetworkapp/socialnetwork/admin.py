@@ -36,7 +36,7 @@ class MyAdminSite(admin.AdminSite):
                     }
                     for option in options
                 ]
-                report_data.append({'question': question.question, 'options': options_data})
+                report_data.append({'question': question.question, 'multi_choice': question.multi_choice, 'options': options_data})
 
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({
