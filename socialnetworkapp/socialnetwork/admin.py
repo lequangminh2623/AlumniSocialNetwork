@@ -1,8 +1,10 @@
+
 from django.contrib import admin
 from django.http import JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import path
-from django.db.models import Count
+from django.db.models import Count, Q
+from datetime import datetime, timedelta
 
 from .models import *
 
@@ -16,8 +18,125 @@ class MyAdminSite(admin.AdminSite):
         urls = super().get_urls()
         custom_urls = [
             path('survey-report/', self.admin_view(self.survey_report), name='survey-report'),
+            path('stats_user/', self.admin_view(self.stats_user), name='stats_user'),
+            path('stats_post/', self.admin_view(self.stats_post), name='stats_post'),
         ]
         return custom_urls + urls
+
+    def stats_user(self, request):
+
+        year = request.GET.get('year')
+        month = request.GET.get('month')
+        quarter_year = request.GET.get('quarter_year')
+        quarter = request.GET.get('quarter')
+
+        stats_user = []
+
+        if month:
+            start_date = datetime.strptime(month, '%Y-%m')
+            end_date = start_date.replace(day=28) + timedelta(days=4)
+            end_date = end_date.replace(day=1) - timedelta(days=1)
+            stats_user = User.objects.filter(date_joined__gte=start_date, date_joined__lte=end_date).values(
+                'role').annotate(total=Count('id'), active=Count('id', filter=Q(is_active=True)))
+
+        elif quarter_year and quarter:
+            start_month = (int(quarter) - 1) * 3 + 1
+            start_date = datetime(int(quarter_year), start_month, 1)
+
+            if quarter == "04":
+                end_date = datetime(int(quarter_year), 12, 31)
+            else:
+                end_date = datetime(int(quarter_year), start_month + 3, 1) - timedelta(days=1)
+
+            stats_user = User.objects.filter(date_joined__gte=start_date, date_joined__lte=end_date).values(
+                'role').annotate(total=Count('id'), active=Count('id', filter=Q(
+                is_active=True)))
+
+        elif year:
+            start_date = datetime(int(year), 1, 1)
+            end_date = datetime(int(year), 12, 31)
+            stats_user = User.objects.filter(date_joined__gte=start_date, date_joined__lte=end_date).values(
+                'role').annotate(total=Count('id'), active=Count('id', filter=Q(is_active=True)))
+
+        stats_with_role_names = [{**stat, 'role_name': Role(stat['role']).name.capitalize()} for stat in stats_user]
+        return TemplateResponse(request, 'admin/stats_user.html', {
+            'stats_user': stats_with_role_names
+        })
+
+    def stats_post(self, request):
+
+        year = request.GET.get('year')
+        month = request.GET.get('month')
+        quarter_year = request.GET.get('quarter_year')
+        quarter = request.GET.get('quarter')
+
+        stats_post = []
+
+        if month:
+            start_date = datetime.strptime(month, '%Y-%m')
+            end_date = start_date.replace(day=28) + timedelta(days=4)
+            end_date = end_date.replace(day=1) - timedelta(days=1)
+
+            post = Post.objects.filter(created_date__gte=start_date, created_date__lte=end_date).count()
+            survey_post = SurveyPost.objects.filter(created_date__gte=start_date, created_date__lte=end_date).count()
+            invitation_post = InvitationPost.objects.filter(created_date__gte=start_date,
+                                                            created_date__lte=end_date).count()
+
+            stats_post = [
+                {'type': 'Bài viết',
+                 'total': post - survey_post - invitation_post},
+                {'type': 'Bài khảo sát',
+                 'total': survey_post},
+                {'type': 'Thư mời',
+                 'total': invitation_post}
+            ]
+
+        elif quarter_year and quarter:
+            start_month = (int(quarter) - 1) * 3 + 1
+            start_date = datetime(int(quarter_year), start_month, 1)
+
+            if quarter == "04":
+                end_date = datetime(int(quarter_year), 12, 31)
+            else:
+                end_date = datetime(int(quarter_year), start_month + 3, 1) - timedelta(days=1)
+
+            post = Post.objects.filter(created_date__gte=start_date, created_date__lte=end_date).count()
+            survey_post = SurveyPost.objects.filter(created_date__gte=start_date, created_date__lte=end_date).count()
+            invitation_post = InvitationPost.objects.filter(created_date__gte=start_date,
+                                                            created_date__lte=end_date).count()
+
+            stats_post = [
+                {'type': 'Bài viết',
+                 'total': post - survey_post - invitation_post},
+                {'type': 'Bài khảo sát',
+                 'total': survey_post},
+                {'type': 'Thư mời',
+                 'total': invitation_post}
+            ]
+
+
+
+        elif year:
+            start_date = datetime(int(year), 1, 1)
+            end_date = datetime(int(year), 12, 31)
+
+            post = Post.objects.filter(created_date__gte=start_date, created_date__lte=end_date).count()
+            survey_post = SurveyPost.objects.filter(created_date__gte=start_date, created_date__lte=end_date).count()
+            invitation_post = InvitationPost.objects.filter(created_date__gte=start_date,
+                                                            created_date__lte=end_date).count()
+
+            stats_post = [
+                {'type': 'Bài viết',
+                 'total': post - survey_post - invitation_post},
+                {'type': 'Bài khảo sát',
+                 'total': survey_post},
+                {'type': 'Thư mời',
+                 'total': invitation_post}
+            ]
+
+        return TemplateResponse(request, 'admin/stats_post.html', {
+            'stats_post': stats_post
+        })
 
     def survey_report(self, request, *args, **kwargs):
         surveys = SurveyPost.objects.all()
@@ -53,7 +172,6 @@ class MyAdminSite(admin.AdminSite):
             })
         else:
             return TemplateResponse(request, 'admin/survey_report.html', {'surveys': surveys})
-
 
 
 my_admin_site = MyAdminSite(name='myadmin')
@@ -160,8 +278,6 @@ class InvitationPostAdmin(admin.ModelAdmin):
     list_display = ("event_name", "user", "created_date", "active")
     search_fields = ("event_name", "user__username")
     filter = ("created_date", "active")
-
-
 
 
 ### **Register Models**

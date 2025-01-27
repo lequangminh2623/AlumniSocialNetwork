@@ -1,6 +1,5 @@
 import os
 
-from celery.worker.control import active
 from django.db import IntegrityError
 from cloudinary.exceptions import Error
 from cloudinary.uploader import upload
@@ -16,15 +15,17 @@ from .models import Alumni, Teacher, Post, Comment, PostImage, SurveyPost, Surve
     UserSurveyOption, Reaction, Group, InvitationPost, User
 from .perms import AdminPermission, OwnerPermission, AlumniPermission
 from .serializers import AlumniSerializer, TeacherSerializer, ChangePasswordSerializer, PostSerializer, \
-    PostImageSerializer, CommentSerializer, SurveyPostSerializer, UserSerializer, SurveyDraftSerializer, ReactionSerializer, GroupSerializer, InvitationPostSerializer
+    PostImageSerializer, CommentSerializer, SurveyPostSerializer, UserSerializer, SurveyDraftSerializer, \
+    ReactionSerializer, GroupSerializer, InvitationPostSerializer
 from .paginators import Pagination
 from django.core.mail import send_mail
 
 
 def index(request):
     return render(request, template_name='index.html', context={
-        'name':'SocialMediaApp'
+        'name': 'SocialMediaApp'
     })
+
 
 # Create your views here.
 
@@ -37,7 +38,7 @@ class UserViewSet(viewsets.ViewSet):
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(methods=['patch'],url_path='change-password', detail=False)
+    @action(methods=['patch'], url_path='change-password', detail=False)
     def change_password(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
@@ -87,7 +88,7 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def update(self,request, pk=None):
+    def update(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk, active=True)
         self.permission_classes = [OwnerPermission | AdminPermission]
         self.check_object_permissions(request, post)
@@ -96,7 +97,7 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         images = request.FILES.getlist('images')
 
         if content:
-            post.content=content
+            post.content = content
             post.save(update_fields=['content'])
 
         PostImage.objects.filter(post=post).delete()
@@ -112,7 +113,6 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         serializer = self.get_serializer(post)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
     def destroy(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk, active=True)
         self.permission_classes = [OwnerPermission | AdminPermission]
@@ -120,14 +120,12 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         post.soft_delete()
         return Response({'message': 'Bài viết đã được xóa thành công.'}, status=status.HTTP_204_NO_CONTENT)
 
-
     @action(methods=['post'], url_path='comment', detail=True, permission_classes=[IsAuthenticated])
     def create_comment(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk, active=True)
 
         if post.lock_comment:
             return Response({"message": f"Bài viết đã khóa bình luận"}, status=status.HTTP_403_FORBIDDEN)
-
 
         content = request.data.get('content')
         image = request.FILES.get('image')
@@ -178,7 +176,6 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         except IntegrityError as e:
             return Response({"error": f"Lỗi khi thực hiện react: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
-
     @action(methods=['get'], url_path='reacts', detail=True)
     def get_reactions(self, request, pk=None):
         post = get_object_or_404(Post, id=pk, active=True)
@@ -186,14 +183,15 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         serializer = ReactionSerializer(reactions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-    @action(methods=['patch'], url_path='lock-unlock-comment', detail=True, permission_classes = [OwnerPermission | AdminPermission])
+    @action(methods=['patch'], url_path='lock-unlock-comment', detail=True,
+            permission_classes=[OwnerPermission | AdminPermission])
     def lock_unlock_comments(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk)
         self.check_object_permissions(request, post)
         post.lock_comment = not post.lock_comment
         post.save(update_fields=['lock_comment'])
-        return Response({'message': 'Cập nhật trạng thái bình luận của bài đăng thành công.'}, status=status.HTTP_200_OK)
+        return Response({'message': 'Cập nhật trạng thái bình luận của bài đăng thành công.'},
+                        status=status.HTTP_200_OK)
 
 
 class CommentViewSet(viewsets.ViewSet):
@@ -223,7 +221,6 @@ class CommentViewSet(viewsets.ViewSet):
         comment.save(update_fields=['content', 'image'])
         return Response({'message': 'Chỉnh sửa bình luận thành công.'}, status=status.HTTP_200_OK)
 
-
     def destroy(self, request, pk=None):
         comment = get_object_or_404(Comment, id=pk, active=True)
         if comment.post.user == request.user or comment.user == request.user or request.user.role == 0:
@@ -231,13 +228,12 @@ class CommentViewSet(viewsets.ViewSet):
             return Response({'message': 'Xóa bình luận thành công.'}, status=status.HTTP_204_NO_CONTENT)
         return Response({'message': 'Bạn không có quyền xóa bình luận này.'}, status=status.HTTP_403_FORBIDDEN)
 
-
     @action(methods=['post'], detail=True, url_path='reply', permission_classes=[IsAuthenticated])
     def reply_comment(self, request, pk=None):
         comment = get_object_or_404(Comment, id=pk, active=True)
 
         if comment.post.lock_comment:
-            return Response({'message': 'Bài viết này đã bị khóa bình luận.'},status=status.HTTP_403_FORBIDDEN)
+            return Response({'message': 'Bài viết này đã bị khóa bình luận.'}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = CommentSerializer(data=request.data)
         if serializer.is_valid():
@@ -337,10 +333,12 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
                 fail_silently=False,
             )
 
-            return Response({"message": f"Thời gian đổi mật khẩu đã được đặt lại cho {teacher.user.username}."}, status=status.HTTP_200_OK)
+            return Response({"message": f"Thời gian đổi mật khẩu đã được đặt lại cho {teacher.user.username}."},
+                            status=status.HTTP_200_OK)
 
         return Response(
-            {"message": f"Tài khoản {teacher.user.username} đã đổi mật khẩu hoặc chưa hết thời gian đổi mật khẩu."},status=status.HTTP_400_BAD_REQUEST)
+            {"message": f"Tài khoản {teacher.user.username} đã đổi mật khẩu hoặc chưa hết thời gian đổi mật khẩu."},
+            status=status.HTTP_400_BAD_REQUEST)
 
 
 class SurveyPostViewSet(viewsets.ViewSet):
@@ -358,7 +356,8 @@ class SurveyPostViewSet(viewsets.ViewSet):
         end_time = request.data.get('end_time')
         questions_data = request.data.get('questions')
 
-        survey_post = SurveyPost.objects.create(content=content, user=request.user, survey_type=survey_type, end_time=end_time)
+        survey_post = SurveyPost.objects.create(content=content, user=request.user, survey_type=survey_type,
+                                                end_time=end_time)
 
         for image in images:
             try:
@@ -456,13 +455,13 @@ class SurveyPostViewSet(viewsets.ViewSet):
             })
         return Response(data, status=status.HTTP_200_OK)
 
-
     @action(detail=True, url_path='draft', methods=['post'], permission_classes=[AlumniPermission])
     def draft(self, request, pk=None):
         self.check_permissions(request)
 
         # Kiểm tra nếu người dùng đã từng trả lời khảo sát này
-        existing_answers = UserSurveyOption.objects.filter(user=request.user, survey_option__survey_question__survey_post=pk)
+        existing_answers = UserSurveyOption.objects.filter(user=request.user,
+                                                           survey_option__survey_question__survey_post=pk)
         if existing_answers.exists():
             return Response({"error": "You had completed this survey."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -549,6 +548,7 @@ class SurveyPostViewSet(viewsets.ViewSet):
         SurveyDraft.objects.filter(user=user, survey_post=survey_post).delete()
 
         return Response({"message": "Survey submitted successfully."}, status=status.HTTP_201_CREATED)
+
 
 class GroupViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView,
                    generics.RetrieveAPIView, generics.DestroyAPIView, generics.UpdateAPIView):
@@ -647,8 +647,8 @@ class InvitationPostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Ret
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def send_invitation_email(self, user, invitation_post):
-        subject=f"Lời mời tham gia sự kiện: {invitation_post.event_name}"
-        message=f"""Xin chào,
+        subject = f"Lời mời tham gia sự kiện: {invitation_post.event_name}"
+        message = f"""Xin chào,
 
                 Bạn được mời tham gia sự kiện '{invitation_post.event_name}' trên nền tảng của chúng tôi.
                 Nội dung sự kiện: {invitation_post.content}
@@ -656,7 +656,7 @@ class InvitationPostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Ret
                 Trân trọng,
                 Đội ngũ Admin.
         """
-        from_email=os.getenv('EMAIL_SEND')
-        recipient_list=[user.email]
+        from_email = os.getenv('EMAIL_SEND')
+        recipient_list = [user.email]
 
         send_mail(subject, message, from_email, recipient_list)
