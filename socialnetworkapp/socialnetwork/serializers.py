@@ -147,6 +147,7 @@ class TeacherSerializer(ModelSerializer):
             try:
                 avatar_result = upload(avatar, folder="MangXaHoi")
                 user_data['avatar'] = avatar_result.get('secure_url')
+                print(avatar)
             except Error as e:
                 raise ValidationError({"avatar": f"Lỗi đăng tải avatar: {str(e)}"})
 
@@ -214,7 +215,6 @@ class SurveyPostSerializer(PostSerializer):
     class Meta:
         model = SurveyPost
         fields = ['id', 'content', 'images', 'lock_comment', 'user', 'created_date', 'updated_date', 'end_time', 'survey_type', 'questions']
-
 
 
 class UserSurveyOptionSerializer(serializers.ModelSerializer):
