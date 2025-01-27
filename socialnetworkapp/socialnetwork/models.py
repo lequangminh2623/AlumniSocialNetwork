@@ -7,7 +7,7 @@ from django.utils import timezone
 
 class BaseModel(models.Model):
     created_date = models.DateTimeField(auto_now_add=True, null=True)
-    updated_date = models.DateTimeField(auto_now=True,null=True)
+    updated_date = models.DateTimeField(auto_now=True, null=True)
     deleted_date = models.DateTimeField(null=True, blank=True)
     active = models.BooleanField(default=True)
 
@@ -33,7 +33,7 @@ class Role(IntEnum):
 
 class User(AbstractUser):
     avatar = CloudinaryField('avatar', null=False, blank=False, folder='MangXaHoi',
-        default='https://res.cloudinary.com/dqw4mc8dg/image/upload/v1737620154/aj6sc6isvelwkotlo1vw_zxmebm_nbsj9i.png')
+                             default='https://res.cloudinary.com/dqw4mc8dg/image/upload/v1737620154/aj6sc6isvelwkotlo1vw_zxmebm_nbsj9i.png')
     cover = CloudinaryField('cover', null=True, blank=True, folder='MangXaHoi')
     email = models.EmailField(unique=True, null=False, max_length=255)
     role = models.IntegerField(
@@ -64,11 +64,9 @@ class Teacher(BaseModel):
             return (timezone.now() - self.user.date_joined).total_seconds() > 1
         return (timezone.now() - self.password_reset_time).total_seconds() > 1
 
-
     def lock_account(self):
         self.user.is_active = False
         self.user.save()
-
 
     def unlock_account(self):
         self.password_reset_time = timezone.now()
@@ -81,7 +79,7 @@ class Post(BaseModel):
     content = models.TextField()
     lock_comment = models.BooleanField(default=False)
 
-    user = models.ForeignKey(User,on_delete=models.CASCADE, null=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
 
     def __str__(self):
         return self.content
@@ -110,7 +108,8 @@ class SurveyType(IntEnum):
 class SurveyPost(Post):
     end_time = models.DateTimeField()
     survey_type = models.IntegerField(choices=SurveyType.choices(),
-                                        default=SurveyType.TRAINING_PROGRAM.value)
+                                      default=SurveyType.TRAINING_PROGRAM.value)
+
     def __str__(self):
         return f"{self.content} - {SurveyType(self.survey_type).name.capitalize()}"
 
@@ -119,7 +118,7 @@ class SurveyQuestion(models.Model):
     question = models.TextField()
     multi_choice = models.BooleanField(default=False)
 
-    survey_post = models.ForeignKey(SurveyPost,  on_delete=models.CASCADE, related_name='questions')
+    survey_post = models.ForeignKey(SurveyPost, on_delete=models.CASCADE, related_name='questions')
 
     def __str__(self):
         return self.question
@@ -155,7 +154,7 @@ class SurveyDraft(models.Model):
 class Group(BaseModel):
     group_name = models.CharField(max_length=255, unique=True)
 
-    users = models.ManyToManyField(User,blank=True)
+    users = models.ManyToManyField(User, blank=True)
 
     def __str__(self):
         return self.group_name
@@ -193,7 +192,7 @@ class Reaction(Interaction):
     reaction = models.IntegerField(choices=ReactionType.choices(), default=ReactionType.LIKE.value)
 
     class Meta:
-        unique_together = ('user','post')
+        unique_together = ('user', 'post')
 
     def __str__(self):
         return f"{self.user.username} - {ReactionType(self.reaction).name} on Post {self.post.id}"

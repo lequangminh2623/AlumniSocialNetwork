@@ -10,7 +10,6 @@ from cloudinary.uploader import upload
 from cloudinary.exceptions import Error
 
 
-
 class UserSerializer(ModelSerializer):
 
     def create(self, validated_data):
@@ -20,7 +19,6 @@ class UserSerializer(ModelSerializer):
         u.set_password(u.password)
         u.save()
         return u
-
 
     class Meta:
         model = User
@@ -34,7 +32,6 @@ class UserSerializer(ModelSerializer):
 
 
 class PostImageSerializer(ModelSerializer):
-
     class Meta:
         model = PostImage
         fields = ['id', 'image']
@@ -58,7 +55,6 @@ class CommentSerializer(ModelSerializer):
         fields = ['id', 'user', 'content', 'image', 'post', 'parent', 'created_date', 'updated_date']
 
 
-
 class ReactionSerializer(ModelSerializer):
     user = UserSerializer(read_only=True)
     post = PostSerializer(read_only=True)
@@ -66,7 +62,6 @@ class ReactionSerializer(ModelSerializer):
     class Meta:
         model = Reaction
         fields = ['id', 'reaction', 'user', 'post', 'created_date', 'updated_date']
-
 
 
 class ChangePasswordSerializer(Serializer):
@@ -81,7 +76,6 @@ class ChangePasswordSerializer(Serializer):
 
 
 class AlumniSerializer(ModelSerializer):
-
     user = UserSerializer()
 
     class Meta:
@@ -213,7 +207,8 @@ class SurveyPostSerializer(PostSerializer):
 
     class Meta:
         model = SurveyPost
-        fields = ['id', 'content', 'images', 'lock_comment', 'user', 'created_date', 'updated_date', 'end_time', 'survey_type', 'questions']
+        fields = ['id', 'content', 'images', 'lock_comment', 'user', 'created_date', 'updated_date', 'end_time',
+                  'survey_type', 'questions']
 
 
 class UserSurveyOptionSerializer(serializers.ModelSerializer):
@@ -227,10 +222,12 @@ class SurveyDraftSerializer(serializers.ModelSerializer):
         model = SurveyDraft
         fields = ['id', 'survey_post', 'user', 'answers', 'drafted_at']
 
+
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = ['id', 'group_name', 'users', 'created_date', 'updated_date']
+
 
 class InvitationPostSerializer(serializers.ModelSerializer):
     users = PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(is_active=True), required=False)

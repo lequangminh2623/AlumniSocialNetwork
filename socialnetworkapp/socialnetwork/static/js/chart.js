@@ -6,17 +6,14 @@ function drawUserStats(labels, data){
         data: {
             labels: labels,
             datasets: [{
-                label: 'Người dùng',
+                label: 'Số lượng',
                 data: data,
                 borderWidth: 2,
-                backgroundColor: ["rgba(255, 87, 51, 0.8)", "rgba(51, 255, 87, 0.8)", "rgba(51, 87, 255, 0.8)", "rgba(255, 51, 161, 0.8)",
-                                  "rgba(161, 51, 255, 0.8)", "rgba(51, 255, 245, 0.8)", "rgba(245, 255, 51, 0.8)", "rgba(255, 140, 51, 0.8)",
-                                  "rgba(140, 255, 51, 0.8)", "rgba(51, 140, 255, 0.8)", "rgba(255, 51, 140, 0.8)", "rgba(140, 51, 255, 0.8)",
-                                  "rgba(51, 255, 140, 0.8)", "rgba(255, 199, 51, 0.8)", "rgba(199, 51, 255, 0.8)", "rgba(51, 199, 255, 0.8)",
-                                  "rgba(255, 51, 199, 0.8)", "rgba(255, 111, 51, 0.8)", "rgba(111, 255, 51, 0.8)", "rgba(51, 111, 255, 0.8)",
-                                  "rgba(255, 51, 111, 0.8)", "rgba(111, 51, 255, 0.8)", "rgba(51, 255, 111, 0.8)", "rgba(255, 214, 51, 0.8)",
-                                  "rgba(214, 51, 255, 0.8)", "rgba(51, 214, 255, 0.8)", "rgba(255, 51, 214, 0.8)", "rgba(255, 165, 51, 0.8)",
-                                  "rgba(165, 255, 51, 0.8)", "rgba(51, 165, 255, 0.8)", "rgba(255, 51, 165, 0.8)"]
+                backgroundColor: ['rgba(75, 192, 192, 0.8)',
+                        'rgba(255, 159, 64, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)']
             }]
         },
         options: {
@@ -30,6 +27,58 @@ function drawUserStats(labels, data){
             },
             scales: {
                 y: {
+                    ticks: {
+                        color: 'white'
+                    },
+                    beginAtZero: true
+                },
+                x: {
+                    ticks: {
+                        color: 'white'
+                    },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+}
+
+function drawPostStats(labels, data){
+
+    const ctx = document.getElementById('postChart');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Số lượng',
+                data: data,
+                borderWidth: 2,
+                backgroundColor: ['rgba(75, 192, 192, 0.8)',
+                        'rgba(255, 159, 64, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white',
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        color: 'white'
+                    },
+                    beginAtZero: true
+                },
+                x: {
                     ticks: {
                         color: 'white'
                     },

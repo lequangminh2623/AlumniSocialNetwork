@@ -1,5 +1,3 @@
-from os.path import basename
-
 from django.urls import path, include
 from . import views
 from rest_framework.routers import DefaultRouter
@@ -14,7 +12,6 @@ router.register('reaction', views.ReactionViewSet, basename='reaction')
 router.register('survey', views.SurveyPostViewSet, basename='survey')
 router.register('group', views.GroupViewSet, basename='group')
 router.register('invitation', views.InvitationPostViewSet, basename='invitation')
-
 
 urlpatterns = [
     path('', include(router.urls)),
