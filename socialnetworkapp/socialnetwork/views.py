@@ -381,7 +381,7 @@ class SurveyPostViewSet(viewsets.ViewSet):
 
     def update(self, request, pk=None):
         self.permission_classes = [OwnerPermission]
-        survey_post = get_object_or_404(SurveyPost, pk=pk)
+        survey_post = get_object_or_404(SurveyPost, pk=pk, active=True)
         self.check_object_permissions(request, survey_post)
 
         content = request.data.get('content', survey_post.content)
@@ -444,7 +444,7 @@ class SurveyPostViewSet(viewsets.ViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def retrieve(self, request, pk=None):
-        survey_post = get_object_or_404(SurveyPost, pk=pk)
+        survey_post = get_object_or_404(SurveyPost, pk=pk, active=True)
         questions = survey_post.questions.all()
         data = []
         for question in questions:
@@ -468,7 +468,7 @@ class SurveyPostViewSet(viewsets.ViewSet):
             return Response({"error": "You had completed this survey."}, status=status.HTTP_400_BAD_REQUEST)
 
         data = request.data
-        survey_post = get_object_or_404(SurveyPost, pk=pk)
+        survey_post = get_object_or_404(SurveyPost, pk=pk, active=True)
         answers = data.get('answers', {})
 
         formatted_answers = [{'question_id': key, 'selected_options': value} for key, value in answers.items()]
@@ -525,7 +525,7 @@ class SurveyPostViewSet(viewsets.ViewSet):
         self.check_permissions(request)
         data = request.data
         user = request.user
-        survey_post = get_object_or_404(SurveyPost, pk=pk)
+        survey_post = get_object_or_404(SurveyPost, pk=pk, active=True)
         answers = data.get('answers', {})
 
         # Kiểm tra nếu người dùng đã từng trả lời khảo sát này
