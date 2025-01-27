@@ -1,9 +1,9 @@
 import os
 
 from rest_framework import serializers
-from rest_framework.serializers import ModelSerializer, ValidationError, Serializer, CharField
+from rest_framework.serializers import ModelSerializer, ValidationError, Serializer, CharField, PrimaryKeyRelatedField
 from .models import User, Alumni, Teacher, Post, PostImage, Comment, SurveyOption, SurveyQuestion, SurveyPost, \
-    SurveyDraft, UserSurveyOption, Reaction
+    SurveyDraft, UserSurveyOption, Reaction, Group, InvitationPost
 from django.core.mail import send_mail
 from django.utils import timezone
 from cloudinary.uploader import upload
@@ -226,3 +226,18 @@ class SurveyDraftSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveyDraft
         fields = ['id', 'survey_post', 'user', 'answers', 'drafted_at']
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = ['id', 'group_name', 'users', 'created_date', 'updated_date']
+
+class InvitationPostSerializer(serializers.ModelSerializer):
+    users = PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(is_active=True), required=False)
+    groups = PrimaryKeyRelatedField(many=True, queryset=Group.objects.filter(active=True), required=False)
+    images = PostImageSerializer(many=True, required=False)
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = InvitationPost
+        fields = ['id', 'event_name', 'content', 'images', 'users', 'groups', 'created_date', 'user']

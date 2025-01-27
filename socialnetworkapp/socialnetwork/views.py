@@ -1,5 +1,6 @@
 import os
 
+from celery.worker.control import active
 from django.db import IntegrityError
 from cloudinary.exceptions import Error
 from cloudinary.uploader import upload
@@ -12,10 +13,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Alumni, Teacher, Post, Comment, PostImage, SurveyPost, SurveyQuestion, SurveyOption, SurveyDraft, \
-    UserSurveyOption, Reaction
+    UserSurveyOption, Reaction, Group, InvitationPost, User
 from .perms import AdminPermission, OwnerPermission, AlumniPermission
 from .serializers import AlumniSerializer, TeacherSerializer, ChangePasswordSerializer, PostSerializer, \
-    PostImageSerializer, CommentSerializer, SurveyPostSerializer, UserSerializer, SurveyDraftSerializer, ReactionSerializer
+    PostImageSerializer, CommentSerializer, SurveyPostSerializer, UserSerializer, SurveyDraftSerializer, ReactionSerializer, GroupSerializer, InvitationPostSerializer
 from .paginators import Pagination
 from django.core.mail import send_mail
 
@@ -91,24 +92,23 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         self.permission_classes = [OwnerPermission | AdminPermission]
         self.check_object_permissions(request, post)
 
-        content = request.data.get('content', post.content)
+        content = request.data.get('content')
         images = request.FILES.getlist('images')
 
+        if content:
+            post.content=content
+            post.save(update_fields=['content'])
+
+        PostImage.objects.filter(post=post).delete()
         if images:
-            PostImage.objects.filter(post=post).delete()
             for image in images:
                 try:
                     upload_result = upload(image, folder='MangXaHoi')
                     image_url = upload_result.get('secure_url')
                     PostImage.objects.create(post=post, image=image_url)
-                    post.content=content
                 except Error as e:
                     return Response({"error": f"Lỗi đăng ảnh: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            post.content=content
-            PostImage.objects.filter(post=post).delete()
-
-        post.save(update_fields=['content'])
+            post.save()
         serializer = self.get_serializer(post)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -380,7 +380,7 @@ class SurveyPostViewSet(viewsets.ViewSet):
 
     def update(self, request, pk=None):
         self.permission_classes = [OwnerPermission]
-        survey_post = get_object_or_404(SurveyPost, pk=pk)
+        survey_post = get_object_or_404(SurveyPost, pk=pk, active=True)
         self.check_object_permissions(request, survey_post)
 
         content = request.data.get('content', survey_post.content)
@@ -443,7 +443,7 @@ class SurveyPostViewSet(viewsets.ViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def retrieve(self, request, pk=None):
-        survey_post = get_object_or_404(SurveyPost, pk=pk)
+        survey_post = get_object_or_404(SurveyPost, pk=pk, active=True)
         questions = survey_post.questions.all()
         data = []
         for question in questions:
@@ -549,3 +549,114 @@ class SurveyPostViewSet(viewsets.ViewSet):
         SurveyDraft.objects.filter(user=user, survey_post=survey_post).delete()
 
         return Response({"message": "Survey submitted successfully."}, status=status.HTTP_201_CREATED)
+
+class GroupViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView,
+                   generics.RetrieveAPIView, generics.DestroyAPIView, generics.UpdateAPIView):
+    queryset = Group.objects.filter(active=True)
+    serializer_class = GroupSerializer
+    permission_classes = [AdminPermission]
+
+
+class InvitationPostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+    queryset = InvitationPost.objects.all()
+    serializer_class = InvitationPostSerializer
+    permission_classes = [AdminPermission]
+
+    def create(self, request):
+
+        event_name = request.data.get('event_name')
+        content = request.data.get('content')
+        users = request.data.get('users', [])
+        groups = request.data.get('groups', [])
+        images = request.FILES.getlist('images')
+
+        if not event_name:
+            return Response({"error": "event_name is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not content:
+            return Response({"error": "content is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        invitation_post = InvitationPost.objects.create(content=content, user=request.user, event_name=event_name)
+
+        if images:
+            for image in images:
+                upload_result = upload(image, folder='MangXaHoi')
+                image_url = upload_result.get('secure_url')
+                PostImage.objects.create(post=invitation_post, image=image_url)
+
+        if users:
+            for user_id in users:
+                user = get_object_or_404(User, id=user_id, is_active=True)
+                invitation_post.users.add(user)
+                self.send_invitation_email(user, invitation_post)
+
+        if groups:
+            for group_id in groups:
+                group = get_object_or_404(Group, id=group_id, active=True)
+                invitation_post.groups.add(group)
+                for user in group.users.filter(is_active=True):
+                    self.send_invitation_email(user, invitation_post)
+
+        serializer = InvitationPostSerializer(invitation_post)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, pk=None):
+        invitation_post = get_object_or_404(InvitationPost, pk=pk, user=request.user, active=True)
+
+        event_name = request.data.get('event_name')
+        content = request.data.get('content')
+        users = request.data.get('users', [])
+        groups = request.data.get('groups', [])
+        images = request.FILES.getlist('images')
+
+        if event_name:
+            invitation_post.event_name = event_name
+            invitation_post.save(update_fields=['event_name'])
+
+        if content:
+            invitation_post.content = content
+            invitation_post.save(update_fields=['content'])
+
+        invitation_post.images.all().delete()
+        if images:
+            for image in images:
+                upload_result = upload(image, folder='MangXaHoi')
+                image_url = upload_result.get('secure_url')
+                PostImage.objects.create(post=invitation_post, image=image_url)
+            invitation_post.save()
+
+        invitation_post.users.clear()
+        if users:
+            for user_id in users:
+                user = get_object_or_404(User, id=user_id, is_active=True)
+                invitation_post.users.add(user)
+                self.send_invitation_email(user, invitation_post)
+            invitation_post.save()
+
+        invitation_post.groups.clear()
+        if groups:
+            for group_id in groups:
+                group = get_object_or_404(Group, id=group_id, active=True)
+                invitation_post.groups.add(group)
+                for user in group.users.filter(is_active=True):
+                    self.send_invitation_email(user, invitation_post)
+            invitation_post.save()
+
+        serializer = InvitationPostSerializer(invitation_post)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def send_invitation_email(self, user, invitation_post):
+        subject=f"Lời mời tham gia sự kiện: {invitation_post.event_name}"
+        message=f"""Xin chào,
+
+                Bạn được mời tham gia sự kiện '{invitation_post.event_name}' trên nền tảng của chúng tôi.
+                Nội dung sự kiện: {invitation_post.content}
+
+                Trân trọng,
+                Đội ngũ Admin.
+        """
+        from_email=os.getenv('EMAIL_SEND')
+        recipient_list=[user.email]
+
+        send_mail(subject, message, from_email, recipient_list)
