@@ -1,0 +1,114 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1 style="text-align: center; font-weight: bold">Báo cáo khảo sát</h1>
+<form method="get" action="{% url 'admin:survey-report' %}">
+    <label for="survey-select">Chọn khảo sát:</label>
+    <select name="pk" id="survey-select">
+        {% for survey in surveys %}
+        <option value="{{ survey.id }}" {% if survey.id == survey_post.id %}selected{% endif %}>
+            ID {{survey.id }}: {{ survey.content }}
+        </option>
+        {% endfor %}
+    </select>
+
+    <!-- Nút gửi form -->
+    <button type="submit">Xem báo cáo</button>
+</form>
+{% if survey_images %}
+<div style="text-align: center; border: 2px solid black; padding: 10px; display: inline-block;">
+    {% for image in survey_images %}
+    <img src="{{ image }}" alt="Survey Image" style="width: 200px; height: auto; margin: 5px; display: inline-block;">
+    {% endfor %}
+</div>
+{% endif %}
+<div id="charts-container"></div>
+
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script>
+    google.charts.load('current', {packages: ['corechart']});
+    google.charts.setOnLoadCallback(fetchSurveyData);
+
+    function fetchSurveyData() {
+    fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(response => response.json())
+        .then(data => {
+            data.data.forEach((question, index) => {
+                // Tạo div bao ngoài cho mỗi câu hỏi
+                let questionDiv = document.createElement('div');
+                questionDiv.id = 'question_' + index;
+                questionDiv.classList.add('question-container'); // Thêm class
+                // Tạo màu nền ngẫu nhiên cho mỗi câu hỏi
+
+                document.getElementById('charts-container').appendChild(questionDiv);
+
+                let chartDiv = document.createElement('div');
+                chartDiv.id = 'chart_container_' + index;
+                chartDiv.classList.add('chart-container');
+                questionDiv.appendChild(chartDiv);
+
+                let chartInsideDiv = document.createElement('div');
+                chartInsideDiv.id = 'chart_' + index;
+                chartDiv.appendChild(chartInsideDiv);
+
+                drawChart(question, 'chart_' + index);
+            });
+        })
+        .catch(error => console.error('Error fetching data:', error));
+    }
+
+
+    function drawChart(question, chartId) {
+        var chartData = [['Lựa chọn', 'Số lượt chọn']];
+        question.options.forEach(option => {
+            chartData.push([option.text, option.count]);
+        });
+
+        var dataTable = google.visualization.arrayToDataTable(chartData);
+        var options = {
+            title: question.question,
+            chartArea: { width: '100%', height: '70%' },
+            legend: { position: 'right', textStyle: { fontName: 'Roboto', fontSize: 12 } },
+            colors: ['#4285F4', '#EA4335', '#FBBC05', '#34A853', '#7B1FA2', '#009688'], // Thêm nhiều màu hơn
+            fontName: 'Roboto',
+            fontSize: 13,
+            titleTextStyle: { fontSize: 14, bold: true },
+            backgroundColor: 'f0f0f0'
+        };
+
+        var chart = new google.visualization.PieChart(document.getElementById(chartId));
+        chart.draw(dataTable, options);
+
+        let chartDiv = document.getElementById(chartId).parentNode;
+        chartDiv.classList.add('chart-container');
+    }
+
+</script>
+
+<style>
+    #survey-select {
+        display: inline-block;
+        width: auto;
+        max-width: 100%;
+        min-width: 150px;
+    }
+    .chart-container {
+        width: 600px; /* Điều chỉnh chiều rộng cho phù hợp */
+        margin: 20px auto; /* Căn giữa và tạo khoảng cách */
+        padding: 20px; /* Khoảng cách bên trong vùng bao */
+        border: 1px solid #ddd; /* Đường viền */
+        border-radius: 8px; /* Bo góc */
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1); /* Đổ bóng nhẹ */
+        display: flex; /* Sử dụng flexbox để sắp xếp */
+        align-items: center; /* Căn giữa theo chiều dọc */
+        justify-content: center;
+    }
+
+    .chart-container > div {
+        flex: 1; /* Chia đều không gian cho biểu đồ và chú thích */
+        text-align: center;
+    }
+    .chart-container > div:first-child{ /* Biểu đồ */
+        max-width: 400px; /* giới hạn chiều rộng biểu đồ */
+    }
+</style>
+{% endblock %}
