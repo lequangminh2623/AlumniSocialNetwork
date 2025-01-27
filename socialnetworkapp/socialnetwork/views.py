@@ -1,4 +1,6 @@
 import os
+
+from celery.worker.control import active
 from django.db import IntegrityError
 from cloudinary.exceptions import Error
 from cloudinary.uploader import upload
@@ -35,20 +37,20 @@ class UserViewSet(viewsets.ViewSet):
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(methods=['patch'],url_path='change-password', detail=False, permission_classes=[OwnerPermission])
+    @action(methods=['patch'],url_path='change-password', detail=False)
     def change_password(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             user = request.user
             user.set_password(serializer.validated_data['new_password'])
-            user.save()
+            user.save(update_fields=['password'])
 
             # Nếu là giáo viên đổi mật khẩu lần đầu, sửa thuộc tính
             if hasattr(user, 'teacher') and user.teacher.must_change_password:
                 teacher = user.teacher
                 teacher.must_change_password = False
                 teacher.password_reset_time = None
-                teacher.save()
+                teacher.save(update_fields=['must_change_password', 'password_reset_time'])
 
             return Response({"message": "Mật khẩu đã được thay đổi thành công."}, status=status.HTTP_200_OK)
 
@@ -65,20 +67,13 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
     serializer_class = PostSerializer
     parser_classes = [JSONParser, MultiPartParser, ]
 
-    def get_permissions(self):
-        if self.action == 'create':
-            permission_classes = [IsAuthenticated]
-        elif self.action == 'destroy':
-            permission_classes = [OwnerPermission, AdminPermission]
-        elif self.action == 'partial_update':
-            permission_classes = [OwnerPermission]
-        else:
-            permission_classes = [AllowAny]
-        return [permission() for permission in permission_classes]
-
     def create(self, request):
+        self.permission_classes = [IsAuthenticated]
+        self.check_permissions(request)
         content = request.data.get('content')
         images = request.FILES.getlist('images')
+        if not content:
+            return Response({"message": f"Yêu cầu content."}, status=status.HTTP_400_BAD_REQUEST)
         post = Post.objects.create(content=content, user=request.user)
 
         for image in images:
@@ -87,19 +82,54 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
                 image_url = upload_result.get('secure_url')
                 PostImage.objects.create(post=post, image=image_url)
             except Error as e:
-                return Response({"error": f"Lỗi đăng bài: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": f"Lỗi đăng ảnh: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(post)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    def update(self,request, pk=None):
+        post = get_object_or_404(Post, pk=pk, active=True)
+        self.permission_classes = [OwnerPermission | AdminPermission]
+        self.check_object_permissions(request, post)
+
+        content = request.data.get('content', post.content)
+        images = request.FILES.getlist('images')
+
+        if images:
+            PostImage.objects.filter(post=post).delete()
+            for image in images:
+                try:
+                    upload_result = upload(image, folder='MangXaHoi')
+                    image_url = upload_result.get('secure_url')
+                    PostImage.objects.create(post=post, image=image_url)
+                    post.content=content
+                except Error as e:
+                    return Response({"error": f"Lỗi đăng ảnh: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            post.content=content
+            PostImage.objects.filter(post=post).delete()
+
+        post.save(update_fields=['content'])
+        serializer = self.get_serializer(post)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
     def destroy(self, request, pk=None):
-        post = get_object_or_404(Post, pk=pk)
+        post = get_object_or_404(Post, pk=pk, active=True)
+        self.permission_classes = [OwnerPermission | AdminPermission]
+        self.check_object_permissions(request, post)
         post.soft_delete()
         return Response({'message': 'Bài viết đã được xóa thành công.'}, status=status.HTTP_204_NO_CONTENT)
 
+
     @action(methods=['post'], url_path='comment', detail=True, permission_classes=[IsAuthenticated])
     def create_comment(self, request, pk=None):
-        post = get_object_or_404(Post, pk=pk)
+        post = get_object_or_404(Post, pk=pk, active=True)
+
+        if post.lock_comment:
+            return Response({"message": f"Bài viết đã khóa bình luận"}, status=status.HTTP_403_FORBIDDEN)
+
+
         content = request.data.get('content')
         image = request.FILES.get('image')
 
@@ -117,13 +147,15 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
 
     @action(methods=['get'], url_path='comments', detail=True)
     def get_comments(self, request, pk=None):
-        comments = Comment.objects.filter(post=pk, active=True)
+        post = get_object_or_404(Post, id=pk, active=True)
+        comments = Comment.objects.filter(post=post, active=True)
+
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(methods=['post'], url_path='react', detail=True, permission_classes=[IsAuthenticated])
     def react_post(self, request, pk=None):
-        post = get_object_or_404(Post, pk=pk)
+        post = get_object_or_404(Post, pk=pk, active=True)
         reaction_type = request.data.get("reaction")
 
         try:
@@ -133,7 +165,8 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
                     reaction.delete()
                     return Response({"message": "Hủy react thành công."}, status=status.HTTP_200_OK)
                 else:
-                    return Response({"message": "Không có react nào để hủy."}, status=status.HTTP_200_OK)
+                    Reaction.objects.create(user=request.user, post=post, reaction=1)
+                    return Response({"message": "React thành công."}, status=status.HTTP_200_OK)
             else:
                 if reaction:
                     reaction.reaction = int(reaction_type)
@@ -149,53 +182,64 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
 
     @action(methods=['get'], url_path='reacts', detail=True)
     def get_reactions(self, request, pk=None):
-        reactions = Reaction.objects.filter(post=pk, active=True)
+        post = get_object_or_404(Post, id=pk, active=True)
+        reactions = Reaction.objects.filter(post=post, active=True)
         serializer = ReactionSerializer(reactions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-    @action(methods=['patch'], url_path='lock-unlock-comment', detail=True, permission_classes = [IsAuthenticated])
+    @action(methods=['patch'], url_path='lock-unlock-comment', detail=True, permission_classes = [OwnerPermission | AdminPermission])
     def lock_unlock_comments(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk)
+        self.check_object_permissions(request, post)
         post.lock_comment = not post.lock_comment
-        post.save()
+        post.save(update_fields=['lock_comment'])
         return Response({'message': 'Cập nhật trạng thái bình luận của bài đăng thành công.'}, status=status.HTTP_200_OK)
 
 
-class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
+class CommentViewSet(viewsets.ViewSet):
     queryset = Comment.objects.filter(active=True)
     serializer_class = CommentSerializer
     parser_classes = [JSONParser, MultiPartParser, ]
 
-    def get_permissions(self):
-        if self.action == 'create':
-            permission_classes = [IsAuthenticated]
-        elif self.action == 'partial_update':
-            permission_classes = [OwnerPermission]
-        elif self.action == 'update':
-            permission_classes = [OwnerPermission]
-        else:
-            permission_classes = [AllowAny]
-        return [permission() for permission in permission_classes]
-
     def update(self, request, pk=None):
-        comment = get_object_or_404(Comment, id=pk)
-        serializer = CommentSerializer(comment, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({'message': 'Chỉnh sửa bình luận thành công.'}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        comment = get_object_or_404(Comment, id=pk, active=True)
+        self.permission_classes = [OwnerPermission]
+        self.check_object_permissions(request, comment)
 
-    def delete_comment(self, request, pk=None):
-        comment = get_object_or_404(Comment, id=pk)
+        content = request.data.get('content', comment.content)
+        image = request.FILES.get('image')
+
+        if image:
+            try:
+                upload_result = upload(image, folder='MangXaHoi')
+                image_url = upload_result.get('secure_url')
+                comment.image = image_url
+                comment.content = content
+            except Error as e:
+                return Response({"error": f"Lỗi đăng ảnh: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            comment.content = content
+            comment.image = None
+        comment.save(update_fields=['content', 'image'])
+        return Response({'message': 'Chỉnh sửa bình luận thành công.'}, status=status.HTTP_200_OK)
+
+
+    def destroy(self, request, pk=None):
+        comment = get_object_or_404(Comment, id=pk, active=True)
         if comment.post.user == request.user or comment.user == request.user or request.user.role == 0:
             comment.soft_delete()
             return Response({'message': 'Xóa bình luận thành công.'}, status=status.HTTP_204_NO_CONTENT)
         return Response({'message': 'Bạn không có quyền xóa bình luận này.'}, status=status.HTTP_403_FORBIDDEN)
 
+
     @action(methods=['post'], detail=True, url_path='reply', permission_classes=[IsAuthenticated])
     def reply_comment(self, request, pk=None):
-        comment = get_object_or_404(Comment, id=pk)
+        comment = get_object_or_404(Comment, id=pk, active=True)
+
+        if comment.post.lock_comment:
+            return Response({'message': 'Bài viết này đã bị khóa bình luận.'},status=status.HTTP_403_FORBIDDEN)
+
         serializer = CommentSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(user=request.user, post=comment.post, parent=comment)
@@ -232,7 +276,9 @@ class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
             return Response({"error": "Tài khoản này đã được duyệt."}, status=status.HTTP_400_BAD_REQUEST)
 
         alumni.is_verified = True
-        alumni.save()
+        alumni.user.is_active = True
+        alumni.save(update_fields=['is_verified'])
+        alumni.user.save(update_fields=['is_active'])
         send_mail(
             subject='Thông báo duyệt tài khoản',
             message=f"""

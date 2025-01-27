@@ -21,7 +21,6 @@ class BaseModel(models.Model):
         self.save(update_fields=['deleted_date', 'active'])
 
 
-
 class Role(IntEnum):
     ADMIN = 0
     ALUMNI = 1
