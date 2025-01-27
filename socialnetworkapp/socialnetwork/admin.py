@@ -1,4 +1,9 @@
 from django.contrib import admin
+from django.http import JsonResponse
+from django.template.response import TemplateResponse
+from django.urls import path
+from django.db.models import Count
+
 from .models import *
 
 
@@ -6,6 +11,49 @@ class MyAdminSite(admin.AdminSite):
     site_header = "Alumni Social Network System"
     site_title = "Alumni Admin"
     index_title = "Welcome to Alumni System Admin"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('survey-report/', self.admin_view(self.survey_report), name='survey-report'),
+        ]
+        return custom_urls + urls
+
+    def survey_report(self, request, *args, **kwargs):
+        surveys = SurveyPost.objects.all()
+        survey_id = request.GET.get('pk', None)
+        if survey_id:
+            survey_post = SurveyPost.objects.get(id=survey_id)
+            questions = SurveyQuestion.objects.filter(survey_post=survey_post)
+
+            report_data = []
+            for question in questions:
+                options = SurveyOption.objects.filter(survey_question=question)
+                options_data = [
+                    {
+                        'text': option.option,
+                        'count': UserSurveyOption.objects.filter(survey_option=option).count()
+                    }
+                    for option in options
+                ]
+                report_data.append({'question': question.question, 'options': options_data})
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'survey_post': survey_post.content,
+                    'survey_images': list(survey_post.images.all().values_list('image', flat=True)),
+                    'data': report_data
+                })
+
+            return TemplateResponse(request, 'admin/survey_report.html', {
+                'survey_post': survey_post,
+                'survey_image': survey_post.images.all(),
+                'report_data': report_data,
+                'surveys': surveys
+            })
+        else:
+            return TemplateResponse(request, 'admin/survey_report.html', {'surveys': surveys})
+
 
 
 my_admin_site = MyAdminSite(name='myadmin')
@@ -112,6 +160,7 @@ class InvitationPostAdmin(admin.ModelAdmin):
     list_display = ("event_name", "user", "created_date", "active")
     search_fields = ("event_name", "user__username")
     filter = ("created_date", "active")
+
 
 
 
