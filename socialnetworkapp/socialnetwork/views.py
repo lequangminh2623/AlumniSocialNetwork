@@ -1,15 +1,14 @@
 import os
 
-from celery.worker.control import active
 from django.db import IntegrityError
 from cloudinary.exceptions import Error
 from cloudinary.uploader import upload
 from django.shortcuts import render
 from rest_framework import viewsets, generics, status
-from rest_framework.decorators import action, permission_classes
+from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import MultiPartParser, JSONParser
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Alumni, Teacher, Post, Comment, PostImage, SurveyPost, SurveyQuestion, SurveyOption, SurveyDraft, \
