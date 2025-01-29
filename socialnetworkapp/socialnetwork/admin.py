@@ -18,8 +18,8 @@ class MyAdminSite(admin.AdminSite):
         urls = super().get_urls()
         custom_urls = [
             path('survey-report/', self.admin_view(self.survey_report), name='survey-report'),
-            path('stats_user/', self.admin_view(self.stats_user), name='stats_user'),
-            path('stats_post/', self.admin_view(self.stats_post), name='stats_post'),
+            path('stats-user/', self.admin_view(self.stats_user), name='stats-user'),
+            path('stats-post/', self.admin_view(self.stats_post), name='stats-post'),
         ]
         return custom_urls + urls
 
