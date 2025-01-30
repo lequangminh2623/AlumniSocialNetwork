@@ -68,6 +68,13 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
     serializer_class = PostSerializer
     parser_classes = [JSONParser, MultiPartParser, ]
 
+    def get_queryset(self):
+        query = self.queryset
+        q = self.request.query_params.get("q")
+        if q:
+            query = query.filter(content__icontains=q)
+        return query
+
     def create(self, request):
         self.permission_classes = [IsAuthenticated]
         self.check_permissions(request)
