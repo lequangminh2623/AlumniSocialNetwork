@@ -24,7 +24,7 @@ SECRET_KEY = 'django-insecure-!825f3keb10ti%^beg^@9!3@lmt1t=vr)pg&r-&k52bumojhbo
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2', '192.168.1.8']
 
 
 # Application definition
@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'channels',
     'channels_redis',
     'celery',
+    'corsheaders',
 ]
 
 import cloudinary
@@ -65,6 +66,7 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -73,6 +75,17 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ORIGIN_REGEX_WHITELIST = [
+    r"^http://localhost(:[0-9]+)?$", # Regex cho tất cả các port localhost
+    r"^http://127\.0\.0\.1(:[0-9]+)?$", # Regex cho 127.0.0.1 và tất cả các port
+]
+
+# CORS_ALLOWED_ORIGINS = [
+#     "http://192.168.1.9:8081",  # React Native
+# ]
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'socialnetworkapp.urls'
 
@@ -231,3 +244,4 @@ LOGGING = {
 
 CLIENT_ID='HlK6gpKpA3SUdCkf4fZOSzGTU5IdOWEVtcBu7fIB'
 CLIENT_SECRET='MNLnudpNi0jWlN4hglm8NCZBUKfqd1OXxqyrtd7WJ404CmZUkLaemkC2e2iafkwumHQTcbhecsO8EUYnrWbwewyT8gR78e6ncTWs7DJgm7LfToGNFB2nKjzHXq8ns4gy'
+OAUTH2_PROVIDER = { 'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore' }
