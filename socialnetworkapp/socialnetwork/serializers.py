@@ -137,7 +137,7 @@ class TeacherSerializer(ModelSerializer):
         user_data['role'] = 2
         avatar = user_data.pop('avatar', None)
         cover = user_data.pop('cover', None)
-        password = user_data.get('password', 'ou@123')
+        password = 'ou@123'
 
         if avatar:
             try:
@@ -164,7 +164,7 @@ class TeacherSerializer(ModelSerializer):
             role=user_data.get('role')
         )
 
-        teacher = Teacher.objects.create(user=user, **validated_data)
+        teacher = Teacher.objects.create(user=user, must_change_password=True)
         teacher.password_reset_time = timezone.now()
 
         self.send_account_email(user, 'ou@123')
