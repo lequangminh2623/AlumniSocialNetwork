@@ -10,6 +10,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from .tasks import send_email_async
 
 from .models import Alumni, Teacher, Post, Comment, PostImage, SurveyPost, SurveyQuestion, SurveyOption, SurveyDraft, \
     UserSurveyOption, Reaction, Group, InvitationPost, User
@@ -120,6 +121,13 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         post.soft_delete()
         return Response({'message': 'Bài viết đã được xóa thành công.'}, status=status.HTTP_204_NO_CONTENT)
 
+    @action(methods=['patch'], url_path='restore', detail=True, permission_classes=[OwnerPermission])
+    def restore_post(self, request, pk=None):
+        post = get_object_or_404(Post, pk=pk, active=True)
+        self.check_object_permissions(request, post)
+        post.restore()
+        return Response({'message': 'Bài viết đã được phục hồi thành công.'}, status=status.HTTP_200_OK)
+
     @action(methods=['post'], url_path='comment', detail=True, permission_classes=[IsAuthenticated])
     def create_comment(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk, active=True)
@@ -184,7 +192,7 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(methods=['patch'], url_path='lock-unlock-comment', detail=True,
-            permission_classes=[OwnerPermission | AdminPermission])
+            permission_classes=[OwnerPermission])
     def lock_unlock_comments(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk)
         self.check_object_permissions(request, post)
@@ -192,6 +200,7 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         post.save(update_fields=['lock_comment'])
         return Response({'message': 'Cập nhật trạng thái bình luận của bài đăng thành công.'},
                         status=status.HTTP_200_OK)
+
 
 
 class CommentViewSet(viewsets.ViewSet):
@@ -241,7 +250,6 @@ class CommentViewSet(viewsets.ViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class ReactionViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Reaction.objects.filter(active=True)
     serializer_class = ReactionSerializer
@@ -274,22 +282,37 @@ class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
         alumni.user.is_active = True
         alumni.save(update_fields=['is_verified'])
         alumni.user.save(update_fields=['is_active'])
-        send_mail(
+
+        send_email_async.delay(
             subject='Thông báo duyệt tài khoản',
             message=f"""
                 Chào {alumni.user.first_name},
-        
+
                 Tài khoản cựu sinh viên của bạn đã được duyệt.
-        
+
                 Trân Trọng,
                 Đội ngũ Admin
             """,
-            from_email=os.getenv('EMAIL_SEND'),
-            recipient_list=[alumni.user.email],
-            fail_silently=False,
+            recipient_email=alumni.user.email,
         )
 
         return Response({"message": "Duyệt tài khoản thành công.", "alumni_id": alumni.id}, status=status.HTTP_200_OK)
+
+    @action(methods=['delete'], url_path='reject', detail=True, permission_classes=[AdminPermission])
+    def reject_alumni(self, request, pk=None):
+        alumni = get_object_or_404(Alumni, pk=pk)
+
+        if alumni.is_verified:
+            return Response(
+                {"error": "Tài khoản đã được duyệt, không thể từ chối yêu cầu."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        alumni.delete()
+
+        return Response(
+            {"message": f"Tài khoản ID {pk} đã bị từ chối."},
+            status=status.HTTP_200_OK,
+        )
 
 
 class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -301,13 +324,15 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     @action(methods=['get'], url_path='expired', detail=False)
     def expired_password_teachers(self, request):
-        queryset = self.get_queryset().filter(is_password_change_expired=True)
-        page = self.paginate_queryset(queryset)
+        queryset = self.get_queryset()  # Lấy tất cả đối tượng Teachers
+        expired_queryset = [teacher for teacher in queryset if teacher.is_password_change_expired()]  # Gọi hàm để lọc
+        page = self.paginate_queryset(expired_queryset)
+
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(expired_queryset, many=True)
         return Response(serializer.data)
 
     @action(methods=['patch'], url_path='reset', detail=True)
@@ -318,7 +343,7 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
             teacher.unlock_account()
 
             # Gửi email thông báo
-            send_mail(
+            send_email_async.delay(
                 subject='Thông báo gia hạn thời gian đổi mật khẩu',
                 message=f"""
                     Chào {teacher.user.first_name},
@@ -328,9 +353,7 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
                     Trân Trọng,
                     Đội ngũ Admin
                 """,
-                from_email=os.getenv('EMAIL_SEND'),
-                recipient_list=[teacher.user.email],
-                fail_silently=False,
+                recipient_email=[teacher.user.email],
             )
 
             return Response({"message": f"Thời gian đổi mật khẩu đã được đặt lại cho {teacher.user.username}."},
@@ -482,7 +505,7 @@ class SurveyPostViewSet(viewsets.ViewSet):
 
             draft_url = 'link'
 
-            send_mail(
+            send_email_async.delay(
                 subject='Nhắc nhở hoàn thành khảo sát',
                 message=f"""
                         Chào {request.user.first_name},
@@ -496,9 +519,7 @@ class SurveyPostViewSet(viewsets.ViewSet):
                         Trân Trọng,
                         Đội ngũ Admin
                     """,
-                from_email=os.getenv('EMAIL_SEND'),
-                recipient_list=[request.user.email],
-                fail_silently=False,
+                recipient_email=[request.user.email],
             )
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -656,7 +677,6 @@ class InvitationPostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Ret
                 Trân trọng,
                 Đội ngũ Admin.
         """
-        from_email = os.getenv('EMAIL_SEND')
-        recipient_list = [user.email]
+        recipient_email = [user.email]
 
-        send_mail(subject, message, from_email, recipient_list)
+        send_email_async.delay(subject, message, recipient_list)
