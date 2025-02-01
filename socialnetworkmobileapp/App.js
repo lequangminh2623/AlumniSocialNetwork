@@ -8,10 +8,13 @@ import Register from './components/User/Register';
 import Login from './components/User/Login';
 import ChangePassword from './components/User/ChangePassword';
 import UserProfile from './components/User/UserProfile';
-import Approve from './components/Alumni/Approve';
+import Approve from './components/Administration/Approve';
+import CreateAccount from './components/Administration/CreateAccount';
 import PostDetailScreen from './components/PostDetailScreen';
 import { MyDispatchContext, MyUserContext } from './configs/UserContexts';
 import MyUserReducer from './configs/UserReducers';
+import Administration from './components/Administration/Administration';
+import ResetTimer from './components/Administration/ResetTimer';
 import CreatePostScreen from './components/CreatePostScreen';
 
 const Stack = createNativeStackNavigator();
@@ -44,16 +47,21 @@ const HomeStackNavigator = () => {
     );
 };
 
+
+const AdminStackNavigator = () => {
+    return (
+        <Stack.Navigator>
+            <Stack.Screen name="AdministrationScreen" component={Administration} options={{ title: 'Quản trị' }} />
+            <Stack.Screen name="ApproveScreen" component={Approve} options={{ title: 'Duyệt tài khoản' }} />
+            <Stack.Screen name="CreateAccountScreen" component={CreateAccount} options={{ title: 'Tạo tài khoản giáo viên' }} />
+            <Stack.Screen name="ResetTimerScreen" component={ResetTimer} options={{ title: 'Đặt lại thời gian đổi mật khẩu' }} />
+        </Stack.Navigator>
+    );
+};
 const ProfileStackNavigator = () => (
     <Stack.Navigator>
         <Stack.Screen name="UserProfileScreen" component={UserProfile} options={{ headerShown: false, title: 'Tài khoản' }} />
         <Stack.Screen name="ChangePassword" component={ChangePassword} options={{ headerShow: false, title: 'Đổi mật khẩu' }} />
-    </Stack.Navigator>
-);
-
-const ApproveStackNavigator = () => (
-    <Stack.Navigator>
-        <Stack.Screen name="ApproveScreen" component={Approve} options={{ headerShown: false, title: 'Duyệt tài khoản' }} />
     </Stack.Navigator>
 );
 
@@ -72,7 +80,7 @@ const TabNavigator = () => {
                     <Tab.Screen name="HomeStack" component={HomeStackNavigator} options={{ title: 'Màn hình chính', tabBarIcon: ({ color, size }) => <Icon name="home" color={color} size={size} /> }} />
                     <Tab.Screen name="ProfileStack" component={ProfileStackNavigator} options={{ title: 'Tài khoản', tabBarIcon: ({ color, size }) => <Icon name="account" color={color} size={size} /> }} />
                     {user.role === 0 && (
-                        <Tab.Screen name="ApproveStack" component={ApproveStackNavigator} options={{ title: 'Duyệt tài khoản', tabBarIcon: ({ color, size }) => <Icon name="account-check" color={color} size={size} /> }} />
+                        <Tab.Screen name="AdminStack" component={AdminStackNavigator} options={{ title: 'Quản trị', tabBarIcon: ({ color, size }) => <Icon name="account-check" color={color} size={size} /> }} />
                     )}
                 </>
             )}

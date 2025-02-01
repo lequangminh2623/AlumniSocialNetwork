@@ -56,4 +56,47 @@ export default styles = StyleSheet.create({
        alignItems: 'center',
        color: 'black',
     },
+    cardContainer: {
+        flex: 1,
+        justifyContent: 'center',  // Vertically center the card
+        alignItems: 'center',      // Horizontally center the card
+        backgroundColor: '#f0f0f0', // Light background
+        padding: 20, // Add some padding to the container
+    },
+    profileCard: {
+        backgroundColor: 'white',
+        borderRadius: 8,
+        padding: 20,
+        margin: 30,
+        alignItems: 'center', // Center content horizontally
+        elevation: 5, // Android shadow
+        shadowColor: '#000', // iOS shadow
+        shadowOffset: { width: 0, height: 2 }, // iOS shadow
+        shadowOpacity: 0.3, // iOS shadow
+        shadowRadius: 4, // iOS shadow
+        width: '80%', // Occupy most of the screen width
+    },
+    avatar: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,  // Make it circular
+        marginBottom: 10, // Space below the avatar
+    },
+    textContainer: { // Style for text content
+        alignItems: 'center', // Center text within container
+    },
+    name: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 5,
+    },
+    username: {
+        fontSize: 16,
+        color: '#555', // Slightly darker color
+        marginBottom: 5,
+    },
+    email: {
+        fontSize: 14,
+        color: '#777', // Lighter color for email
+    },
 });

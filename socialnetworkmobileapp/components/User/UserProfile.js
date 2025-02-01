@@ -1,10 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useContext } from "react";
-import { View } from "react-native";
-import { Button, Text } from "react-native-paper";
+import { TouchableOpacity, View, Image } from "react-native";
+import { Text, TextInput } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { MyDispatchContext, MyUserContext } from "../../configs/UserContexts";
+import { getValidImageUrl } from "../PostItem";
 import styles from "./UserStyles";
+import Styles from "../../styles/Styles";
 
 const UserProfile = () => {
     const user = useContext(MyUserContext);
@@ -19,18 +21,24 @@ const UserProfile = () => {
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.view}>
-                <Text style={styles.title}>Chào {user?.username}</Text>
-                <Text style={styles.info}>Email: {user?.email}</Text>
-                <Text style={styles.info}>Họ và tên: {user?.last_name} {user?.first_name}</Text>
+        <View style={styles.cardContainer}>
+            <View style={styles.profileCard}>
+                <Image
+                    source={{ uri: getValidImageUrl(user.avatar) }}
+                    style={styles.avatar}
+                />
+                <View style={styles.textContainer}>
+                  <Text style={styles.name}>{user?.last_name} {user?.first_name}</Text>
+                  <Text style={styles.username}>{user?.username}</Text>
+                  <Text style={styles.email}> {user?.email}</Text>
+                </View>
             </View>
-            <Button mode="contained-tonal" onPress={() => nav.navigate("ChangePassword")} style={styles.button}>
-                Đổi mật khẩu
-            </Button>
-            <Button mode="contained-tonal" onPress={logout} style={styles.button}>
-                Đăng xuất
-            </Button>
+                <TouchableOpacity onPress={() => nav.navigate("ChangePasswordScreen")} style={Styles.menuItem}>
+                    <Text style={Styles.menuText} >Đổi mật khẩu</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={logout}  style={Styles.menuItem}>
+                    <Text style={Styles.menuText} >Đăng xuất</Text>
+                </TouchableOpacity>
         </View>
     );
 };

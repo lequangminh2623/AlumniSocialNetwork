@@ -13,6 +13,9 @@ export const endpoints = {
     'reject-alumni': alumniId => `/alumni/${alumniId}/reject/`,
     'comments': (postId) => `/post/${postId}/comments/`,
     'reacts': (postId) => `/post/${postId}/reacts/`,
+    'teacher': '/teacher/',
+    'expired-teacher': 'teacher/expired/',
+    'reset-teacher': teacherId => `/teacher/${teacherId}/reset/`,
     'react': (postId) => `/post/${postId}/react/`,
 }
 

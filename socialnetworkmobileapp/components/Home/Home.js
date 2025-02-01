@@ -34,6 +34,8 @@ const Home = () => {
                 setLoading(false);
             }
         }
+        else 
+            return
     };
 
     // Hàm để tải lại bài viết
@@ -74,7 +76,6 @@ const Home = () => {
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => <PostItem post={item} />}
             onEndReached={loadMore}
-            onEndReachedThreshold={0.5}
             ListFooterComponent={loading && page > 1 ? <ActivityIndicator size="large" /> : null}
             refreshing={refreshing}
             onRefresh={refreshPosts}

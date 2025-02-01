@@ -8,7 +8,7 @@ import { theme } from "../styles/theme";
 import { MyUserContext } from "../configs/UserContexts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const getValidImageUrl = (url) => {
+export const getValidImageUrl = (url) => {
     if (url.startsWith("image/upload/")) {
         return url.replace(/^image\/upload\//, "");
     }
@@ -97,7 +97,7 @@ export const PostItem = ({ post }) => {
                     <FontAwesome name="heart" size={18} color={liked ? theme.colors.rose : theme.colors.textLight} />
                 </TouchableOpacity>
                 <Text style={styles.interactionText}>{reactCount}</Text>
-                <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetail", { post })} />
+                <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { post })} />
                 <Text style={styles.interactionText}>{commentCount}</Text>
             </View>
         </View>
