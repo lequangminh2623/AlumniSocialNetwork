@@ -27,19 +27,17 @@ const PostDetailScreen = ({ route }) => {
     const [comments, setComments] = useState([]);
     const cleanAvatarUrlAvatar = post.user.avatar.replace(/^image\/upload\//, "");
 
-    const [commentsCount, setCommentsCount] = useState(0);
-
     useEffect(() => {
         const fetchComments = async () => {
             const data = await getPostComments(post.id);
             setComments(data);
-            setCommentsCount(data.length);
         };
 
         fetchComments();
     }, [post.id]);
-    return (
-        <View style={styles.container}>
+
+    const renderPost = () => (
+        <View>
             <View style={styles.post}>
                 <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.avatar} />
                 <View>
@@ -48,7 +46,6 @@ const PostDetailScreen = ({ route }) => {
                 </View>
             </View>
             <Text style={styles.content}>{post.content}</Text>
-
             {post.images && post.images.length > 0 && (
                 <View style={styles.imagesContainer}>
                     {post.images.map((image, index) => (
@@ -61,20 +58,26 @@ const PostDetailScreen = ({ route }) => {
                 </View>
             )}
             <Text style={styles.commentTitle}>Bình luận</Text>
-            <FlatList
-                data={comments}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                    <View style={styles.comment}>
-                        <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.commentAvatar} />
-                        <View>
-                            <Text style={styles.commentUser}>{item.user.username}</Text>
-                            <Text style={styles.commentText}>{item.content}</Text>
-                        </View>
-                    </View>
-                )}
-            />
         </View>
+    );
+
+    return (
+        <FlatList
+            style={styles.container}
+            contentContainerStyle={{ paddingBottom: 30 }}
+            data={comments}
+            keyExtractor={(item) => item.id.toString()}
+            ListHeaderComponent={renderPost}
+            renderItem={({ item }) => (
+                <View style={styles.comment}>
+                    <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.commentAvatar} />
+                    <View>
+                        <Text style={styles.commentUser}>{item.user.username}</Text>
+                        <Text style={styles.commentText}>{item.content}</Text>
+                    </View>
+                </View>
+            )}
+        />
     );
 };
 

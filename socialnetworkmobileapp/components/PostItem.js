@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState, useContext } from "react";
+import { Image, StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import { hp } from "../styles/common";
 import { FontAwesome } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { getPostComments, getPostReacts } from "../configs/APIs";
+import { getPostComments, getPostReacts, authApis, endpoints } from "../configs/APIs";
 import { theme } from "../styles/theme";
+import { MyUserContext } from "../configs/UserContexts";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const getValidImageUrl = (url) => {
     if (url.startsWith("image/upload/")) {
@@ -28,11 +30,12 @@ const formatDate = (dateString) => {
 
 export const PostItem = ({ post }) => {
     const cleanAvatarUrlAvatar = post.user.avatar.replace(/^image\/upload\//, "");
-    const liked = false;
     const navigation = useNavigation();
+    const user = useContext(MyUserContext);
 
     const [commentCount, setCommentCount] = useState(0);
     const [reactCount, setReactCount] = useState(0);
+    const [liked, setLiked] = useState(false);
 
     useEffect(() => {
         const fetchComments = async () => {
@@ -41,10 +44,24 @@ export const PostItem = ({ post }) => {
 
             const reacts = await getPostReacts(post.id);
             setReactCount(reacts.length);
+            setLiked(reacts.some(react => react.user.id === user.id));
         };
 
         fetchComments();
     }, [post.id]);
+
+    const handleReact = async () => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            const api = authApis(token);
+            await api.post(endpoints.react(post.id));
+            const reacts = await getPostReacts(post.id);
+            setReactCount(reacts.length);
+            setLiked(reacts.some(react => react.user.id === user.id));
+        } catch (error) {
+            console.error("Error reacting to post:", error);
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -76,7 +93,9 @@ export const PostItem = ({ post }) => {
 
             {/* Thanh tương tác */}
             <View style={styles.interactions}>
-                <FontAwesome name="heart" size={18} color={liked ? theme.colors.rose : theme.colors.textLight} />
+                <TouchableOpacity onPress={handleReact}>
+                    <FontAwesome name="heart" size={18} color={liked ? theme.colors.rose : theme.colors.textLight} />
+                </TouchableOpacity>
                 <Text style={styles.interactionText}>{reactCount}</Text>
                 <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { post })} />
                 <Text style={styles.interactionText}>{commentCount}</Text>

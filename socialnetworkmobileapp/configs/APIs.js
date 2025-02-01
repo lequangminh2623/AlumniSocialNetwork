@@ -11,12 +11,12 @@ export const endpoints = {
     'unverified-alumni': '/alumni/unverified/',
     'approve-alumni': alumniId => `/alumni/${alumniId}/approve/`,
     'reject-alumni': alumniId => `/alumni/${alumniId}/reject/`,
-    'post': '/post/',
     'comments': (postId) => `/post/${postId}/comments/`,
     'reacts': (postId) => `/post/${postId}/reacts/`,
     'teacher': '/teacher/',
     'expired-teacher': 'teacher/expired/',
     'reset-teacher': teacherId => `/teacher/${teacherId}/reset/`,
+    'react': (postId) => `/post/${postId}/react/`,
 }
 
 export const getPostComments = async (postId) => {
@@ -39,10 +39,9 @@ export const getPostReacts = async (postId) => {
     }
 };
 
-export const authApis = (token) =>  {
-    console.info(token);
+export const authApis = (token) => {
     return axios.create({
-        baseURL: BASE_URL, 
+        baseURL: BASE_URL,
         headers: {
             'Authorization': `Bearer ${token}`
         }

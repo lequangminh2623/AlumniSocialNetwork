@@ -8,7 +8,9 @@ const Home = () => {
     const [posts, setPosts] = React.useState([]);
     const [loading, setLoading] = React.useState(false);
     const [page, setPage] = React.useState(1);
+    const [refreshing, setRefreshing] = React.useState(false);
 
+    // Hàm load posts
     const loadPosts = async () => {
         if (page > 0) {
             setLoading(true);
@@ -24,7 +26,7 @@ const Home = () => {
                 }
 
                 if (res.data.next === null) {
-                    setPage(0);
+                    setPage(0); // Không còn dữ liệu nữa
                 }
             } catch (ex) {
                 console.error(ex);
@@ -36,13 +38,29 @@ const Home = () => {
             return
     };
 
+    // Hàm để tải lại bài viết
+    const refreshPosts = async () => {
+        setRefreshing(true);
+        setPage(1); // Reset lại trang về 1
+        try {
+            let res = await APIs.get(`${endpoints['post']}?page=1`);
+            setPosts(res.data.results);
+            setPage(2);
+        } catch (ex) {
+            console.error(ex);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
+    // Gọi loadPosts mỗi khi page thay đổi
     React.useEffect(() => {
         loadPosts();
     }, [page]);
 
     const loadMore = () => {
         if (page > 0 && !loading) {
-            setPage(page + 1);
+            setPage(page + 1); // Khi tới cuối danh sách, load thêm bài viết
         }
     };
 
@@ -59,6 +77,8 @@ const Home = () => {
             renderItem={({ item }) => <PostItem post={item} />}
             onEndReached={loadMore}
             ListFooterComponent={loading && page > 1 ? <ActivityIndicator size="large" /> : null}
+            refreshing={refreshing}
+            onRefresh={refreshPosts}
         />
     );
 };

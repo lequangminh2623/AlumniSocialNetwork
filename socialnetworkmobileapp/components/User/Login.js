@@ -58,8 +58,8 @@ const Login = () => {
         try {
             setLoading(true);
             const res = await APIs.post(endpoints['login'], {
-                "client_id": "HlK6gpKpA3SUdCkf4fZOSzGTU5IdOWEVtcBu7fIB",
-                "client_secret": "MNLnudpNi0jWlN4hglm8NCZBUKfqd1OXxqyrtd7WJ404CmZUkLaemkC2e2iafkwumHQTcbhecsO8EUYnrWbwewyT8gR78e6ncTWs7DJgm7LfToGNFB2nKjzHXq8ns4gy",
+                "client_id": "MV3NXBPByLWjE1z3PYL0z9m6sICf2X55J1NzB97z",
+                "client_secret": "Vyxl2HJWUPUaGXRGi4UR807Ge4Pp5OhDoLHHr2mMz5zk5BlQLQSiGmVvXnsKvmo66izLYbSz3DmOWlcFnRS6UbQlpvqTFxaGTzEHHmv2q08o6BwWvOC8ygJiDY2rRrn4",
                 'grant_type': "password",
                 ...user
             });
@@ -74,11 +74,10 @@ const Login = () => {
             
                 dispatch({ "type": "login", "payload": user.data });
 
-                nav.navigate("HomeStack");
+                nav.navigate('HomeStack', { screen: 'HomeScreen' });
 
             }, 100);
            
-            
         } catch (ex) {
             console.error(ex);
             Alert.alert("Đăng nhập", "Tài khoản hoặc mật khẩu không đúng!.");
