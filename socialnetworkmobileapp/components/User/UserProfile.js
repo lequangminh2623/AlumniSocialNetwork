@@ -25,7 +25,7 @@ const UserProfile = () => {
                 <Text style={styles.info}>Email: {user?.email}</Text>
                 <Text style={styles.info}>Họ và tên: {user?.last_name} {user?.first_name}</Text>
             </View>
-            <Button mode="contained-tonal" onPress={() => nav.navigate("change-password")} style={styles.button}>
+            <Button mode="contained-tonal" onPress={() => nav.navigate("ChangePassword")} style={styles.button}>
                 Đổi mật khẩu
             </Button>
             <Button mode="contained-tonal" onPress={logout} style={styles.button}>
