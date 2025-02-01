@@ -20,6 +20,11 @@ class BaseModel(models.Model):
         self.active = False
         self.save(update_fields=['deleted_date', 'active'])
 
+    def restore(self, using=None, keep_parents=False):
+        self.deleted_date = None
+        self.active = True
+        self.save(update_fields=['deleted_date', 'active'])
+
 
 class Role(IntEnum):
     ADMIN = 0
@@ -41,7 +46,6 @@ class User(AbstractUser):
         default=Role.ADMIN.value
     )
 
-
 class Alumni(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     student_code = models.CharField(max_length=10, unique=True)
@@ -49,6 +53,10 @@ class Alumni(BaseModel):
 
     def __str__(self):
         return str(self.user)
+
+    def delete(self, *args, **kwargs):
+        self.user.delete()
+        super().delete(*args, **kwargs)
 
 
 class Teacher(BaseModel):

@@ -1,4 +1,7 @@
+import os
+
 from celery import shared_task
+from django.core.mail import send_mail
 from django.utils import timezone
 from datetime import timedelta
 from django.db import DatabaseError
@@ -79,3 +82,18 @@ def delete_permanently_after_30_days():
         celery_logger.error(f"An unexpected error occurred: {str(generic_error)}")
 
     celery_logger.info("Task completed: delete_permanently_after_30_days")
+
+
+@shared_task
+def send_email_async(subject, message, recipient_email):
+    """
+       Tác vụ celery để gửi email.
+       """
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=os.getenv('EMAIL_SEND'),
+        recipient_list=[recipient_email],
+        fail_silently=False,
+    )
+    return f"Email sent to {recipient_email}"

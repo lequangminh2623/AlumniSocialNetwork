@@ -4,7 +4,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError, Serializer, CharField, PrimaryKeyRelatedField
 from .models import User, Alumni, Teacher, Post, PostImage, Comment, SurveyOption, SurveyQuestion, SurveyPost, \
     SurveyDraft, UserSurveyOption, Reaction, Group, InvitationPost
-from django.core.mail import send_mail
+from .tasks import send_email_async
 from django.utils import timezone
 from cloudinary.uploader import upload
 from cloudinary.exceptions import Error
@@ -22,7 +22,7 @@ class UserSerializer(ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "password", "avatar", "cover", "first_name", "last_name", "email"]
+        fields = ["id", "username", "password", "avatar", "cover", "first_name", "last_name", "email", "role"]
         extra_kwargs = {
             'password': {
                 'write_only': True,
@@ -83,6 +83,7 @@ class AlumniSerializer(ModelSerializer):
         fields = ["id", "user", "student_code", "is_verified"]
 
     def create(self, validated_data):
+        print(validated_data)
         user_data = validated_data.pop('user')
         user_data['role'] = 1
         user_data['is_active'] = False
@@ -99,6 +100,8 @@ class AlumniSerializer(ModelSerializer):
                 user_data['avatar'] = avatar_result.get('secure_url')
             except Error as e:
                 raise ValidationError({"avatar": f"Lỗi đăng tải avatar: {str(e)}"})
+        else:
+            raise ValidationError({"avatar": "Yêu cầu ảnh đại diện."})
 
         if cover:
             try:
@@ -185,7 +188,7 @@ class TeacherSerializer(ModelSerializer):
         Trân Trọng,
         Đội ngũ Admin
         """
-        send_mail(subject, message, os.getenv('EMAIL_SEND'), [user.email])
+        send_email_async.delay(subject, message, [user.email])
 
 
 class SurveyOptionSerializer(serializers.ModelSerializer):
