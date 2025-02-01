@@ -14,6 +14,9 @@ export const endpoints = {
     'post': '/post/',
     'comments': (postId) => `/post/${postId}/comments/`,
     'reacts': (postId) => `/post/${postId}/reacts/`,
+    'teacher': '/teacher/',
+    'expired-teacher': 'teacher/expired/',
+    'reset-teacher': teacherId => `/teacher/${teacherId}/reset/`,
 }
 
 export const getPostComments = async (postId) => {

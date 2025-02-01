@@ -2,19 +2,17 @@ import React, { useState } from "react";
 import { Image, Pressable, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, Alert, View } from "react-native";
 import { Button, TextInput } from "react-native-paper";
 import * as ImagePicker from 'expo-image-picker';
-import APIs, { endpoints } from "../../configs/APIs";
+import { authApis, endpoints } from "../../configs/APIs";
 import { useNavigation } from "@react-navigation/native";
-import styles from "./UserStyles";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import styles from "../User/UserStyles";
 
-const Register = () => {
-    const [alumni, setAlumni] = useState({
-        "student_code": "",
+const CreateAccount = () => {
+    const [teacher, setTeacher] = useState({
         "last_name": "",
         "first_name": "",
         "email": "",
         "username": "",
-        "password": "",
-        "confirm": ""
     });
     const [loading, setLoading] = useState(false);
     const [avatar, setAvatar] = useState(null);
@@ -23,13 +21,7 @@ const Register = () => {
 
     const nav = useNavigation();
 
-    const alumnis = {
-        "student_code": {
-            "title": "Mã sinh viên",
-            "field": "student_code",
-            "secure": false,
-            "icon": "card-account-details"
-        },
+    const teachers = {
         "last_name": {
             "title": "Họ",
             "field": "last_name",
@@ -54,22 +46,10 @@ const Register = () => {
             "secure": false,
             "icon": "account-circle"
         },
-        "password": {
-            "title": "Mật khẩu",
-            "field": "password",
-            "secure": true,
-            "icon": "lock"
-        },
-        "confirm": {
-            "title": "Xác nhận mật khẩu",
-            "field": "confirm",
-            "secure": true,
-            "icon": "lock-check"
-        }
     };
 
-    const updateAlumni = (value, field) => {
-        setAlumni({ ...alumni, [field]: value });
+    const updateteacher = (value, field) => {
+        setTeacher({ ...teacher, [field]: value });
         setErrors({ ...errors, [field]: false });
     };
 
@@ -96,15 +76,11 @@ const Register = () => {
     const validateFields = () => {
         const newErrors = {};
         let isValid = true;
-        for (let key in alumni) {
-            if (!alumni[key]) {
+        for (let key in teacher) {
+            if (!teacher[key]) {
                 newErrors[key] = true;
                 isValid = false;
             }
-        }
-        if (!avatar) {
-            newErrors.avatar = true;
-            isValid = false;
         }
         setErrors(newErrors);
         return isValid;
@@ -112,19 +88,16 @@ const Register = () => {
 
     const register = async () => {
         if (!validateFields()) {
-            Alert.alert("Đăng ký", "Vui lòng điền đầy đủ thông tin.");
+            Alert.alert("Tạo tài khoản", "Vui lòng điền đầy đủ thông tin.");
             return;
         }
 
         setLoading(true);
         try {
             const form = new FormData();
-            for (let key in alumni) {
-                if (key !== 'confirm') {
-                    form.append(`user.${key}`, alumni[key]);
-                }
+            for (let key in teacher) {
+                form.append(`user.${key}`, teacher[key]);
             }
-            form.append('student_code', alumni['student_code']);
 
             if (avatar) {
                 form.append('user.avatar', {
@@ -141,42 +114,39 @@ const Register = () => {
                 });
             }
 
-
-            await APIs.post(endpoints['alumni'], form, {
+            
+            const token = await AsyncStorage.getItem("token");
+            await authApis(token).post(endpoints['teacher'], form, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
             });
 
             // Clear input fields and show success message
-            setAlumni({
-                "student_code": "",
+            setTeacher({
                 "last_name": "",
                 "first_name": "",
                 "email": "",
                 "username": "",
-                "password": "",
-                "confirm": ""
             });
             setAvatar(null);
             setCover(null);
-            Alert.alert("Đăng ký thành công", "Đang chờ xét duyệt");
+            Alert.alert("Tạo tài khoản", "Tạo tài khoản giáo viên thành công");
 
-            nav.navigate("LoginScreen");
         } catch (error) {
             // Handle error
             if (error.response) {
                 // Server responded with a status other than 200 range
                 console.error('Server Error:', error.response.data);
-                Alert.alert('Đăng ký', error.response.data.message || 'Thông tin đăng ký không hợp lệ.');
+                Alert.alert('Tạo tài khoản', error.response.data.message || 'Thông tin Tạo tài khoản không hợp lệ.');
             } else if (error.request) {
                 // Request was made but no response was received
                 console.error('Network Error:', error.request);
-                Alert.alert('Đăng ký', 'Máy chủ quá tải, vui lòng thử lại sau.');
+                Alert.alert('Tạo tài khoản', 'Máy chủ quá tải, vui lòng thử lại sau.');
             } else {
                 // Something else happened while setting up the request
                 console.error('Error:', error.message);
-                Alert.alert('Đăng ký', error.message);
+                Alert.alert('Tạo tài khoản', error.message);
             }
         } finally {
             setLoading(false);
@@ -186,19 +156,19 @@ const Register = () => {
     return (
         <KeyboardAvoidingView behavior={Platform.OS === 'android' ? 'padding' : 'height'} style={styles.container}>
             <View style={styles.view}>
-                <Text style={styles.title}>Hãy bắt đầu</Text>
-                <Text style={styles.title}>Bằng cách tạo một tài khoản!</Text>
+                <Text style={styles.title}>Điền thông tin</Text>
+                <Text style={styles.title}>Để tạo tài khoản giáo viên:</Text>
             </View>
             <ScrollView contentContainerStyle={styles.scrollView}>
-                {Object.values(alumnis).map(u => (
+                {Object.values(teachers).map(u => (
                     <View key={u.field} style={styles.inputContainer}>
                         <TextInput
                             left={<TextInput.Icon icon={u.icon} />}
                             secureTextEntry={u.secure}
                             style={styles.input}
                             placeholder={u.title}
-                            value={alumni[u.field]}
-                            onChangeText={t => updateAlumni(t, u.field)}
+                            value={teacher[u.field]}
+                            onChangeText={t => updateteacher(t, u.field)}
                             mode="outlined"
                             label={u.title}
                             outlineColor={errors[u.field] ? 'red' : undefined}
@@ -224,17 +194,11 @@ const Register = () => {
                     icon="account-check"
                     mode="contained"
                 >
-                    Đăng ký
+                    Tạo tài khoản
                 </Button>
-                <View style={styles.switch}>
-                    <Text style={styles.switchText}>Đã có tài khoản?</Text>
-                    <Pressable onPress={() => nav.navigate("LoginScreen")}>
-                        <Text style={[styles.switchText, {color: '#38559a', fontWeight: 'bold'}]}> Đăng nhập</Text>
-                    </Pressable>
-                </View>
             </ScrollView>
         </KeyboardAvoidingView>
     );
 };
 
-export default Register;
+export default CreateAccount;

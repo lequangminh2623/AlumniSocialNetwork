@@ -6,7 +6,7 @@ import { useNavigation } from "@react-navigation/native";
 import { getPostComments, getPostReacts } from "../configs/APIs";
 import { theme } from "../styles/theme";
 
-const getValidImageUrl = (url) => {
+export const getValidImageUrl = (url) => {
     if (url.startsWith("image/upload/")) {
         return url.replace(/^image\/upload\//, "");
     }
@@ -78,7 +78,7 @@ export const PostItem = ({ post }) => {
             <View style={styles.interactions}>
                 <FontAwesome name="heart" size={18} color={liked ? theme.colors.rose : theme.colors.textLight} />
                 <Text style={styles.interactionText}>{reactCount}</Text>
-                <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetail", { post })} />
+                <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { post })} />
                 <Text style={styles.interactionText}>{commentCount}</Text>
             </View>
         </View>

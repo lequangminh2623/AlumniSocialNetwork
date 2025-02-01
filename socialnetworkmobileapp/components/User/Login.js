@@ -74,7 +74,7 @@ const Login = () => {
             
                 dispatch({ "type": "login", "payload": user.data });
 
-                nav.navigate("home");
+                nav.navigate("HomeStack");
 
             }, 100);
            
@@ -122,7 +122,7 @@ const Login = () => {
 
                 <View style={styles.switch}>
                     <Text style={styles.switchText}>Chưa có tài khoản?</Text>
-                    <Pressable onPress={() => nav.navigate("register")}>
+                    <Pressable onPress={() => nav.navigate("RegisterScreen")}>
                         <Text style={[styles.switchText, {color: '#38559a', fontWeight: 'bold'}]}> Đăng ký</Text>
                     </Pressable>
                 </View>
