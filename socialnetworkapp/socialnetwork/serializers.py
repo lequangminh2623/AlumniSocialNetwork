@@ -83,7 +83,6 @@ class AlumniSerializer(ModelSerializer):
         fields = ["id", "user", "student_code", "is_verified"]
 
     def create(self, validated_data):
-        print(validated_data)
         user_data = validated_data.pop('user')
         user_data['role'] = 1
         user_data['is_active'] = False

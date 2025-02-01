@@ -1,7 +1,7 @@
 import React from "react";
-import { FlatList, StyleSheet} from "react-native";
+import { FlatList, StyleSheet } from "react-native";
 import APIs, { endpoints } from "../../configs/APIs";
-import { ActivityIndicator, List } from "react-native-paper";
+import { ActivityIndicator } from "react-native-paper";
 import { PostItem } from "../PostItem";
 
 const Home = () => {
@@ -11,14 +11,14 @@ const Home = () => {
 
     const loadPosts = async () => {
         if (page > 0) {
-            setLoading(true)
+            setLoading(true);
             try {
                 let url = `${endpoints['post']}?page=${page}`;
                 let res = await APIs.get(url);
                 console.info(res.data);
 
                 if (page > 1) {
-                    setPosts((posts)=>[...posts, ...res.data.results])
+                    setPosts((posts) => [...posts, ...res.data.results]);
                 } else {
                     setPosts(res.data.results);
                 }
@@ -32,9 +32,7 @@ const Home = () => {
                 setLoading(false);
             }
         }
-
-
-    }
+    };
 
     React.useEffect(() => {
         loadPosts();
@@ -44,11 +42,11 @@ const Home = () => {
         if (page > 0 && !loading) {
             setPage(page + 1);
         }
-    }
-    if (loading) {
+    };
+
+    if (loading && page === 1) {
         return <ActivityIndicator size="large" />;
     }
-
 
     return (
         <FlatList
@@ -58,11 +56,16 @@ const Home = () => {
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => <PostItem post={item} />}
             onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={loading && page > 1 ? <ActivityIndicator size="large" /> : null}
         />
     );
 };
 
-
 export default Home;
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({
+    listStyle: {
+        paddingBottom: 20,
+    },
+});
