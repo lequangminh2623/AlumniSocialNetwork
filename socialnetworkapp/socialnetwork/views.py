@@ -1,3 +1,4 @@
+import json
 import os
 
 from django.db import IntegrityError
@@ -379,6 +380,12 @@ class SurveyPostViewSet(viewsets.ViewSet):
         end_time = request.data.get('end_time')
         questions_data = request.data.get('questions')
 
+        # Parse the questions_data JSON string into a Python list of dictionaries
+        try:
+            questions_data = json.loads(questions_data)
+        except json.JSONDecodeError as e:
+            return Response({"error": f"Lỗi phân tích cú pháp JSON: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
         survey_post = SurveyPost.objects.create(content=content, user=request.user, survey_type=survey_type,
                                                 end_time=end_time)
 
@@ -399,7 +406,6 @@ class SurveyPostViewSet(viewsets.ViewSet):
                 SurveyOption.objects.create(survey_question=question, **option_data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
     def update(self, request, pk=None):
         self.permission_classes = [OwnerPermission]
         survey_post = get_object_or_404(SurveyPost, pk=pk, active=True)
