@@ -1,15 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useContext, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Alert, View, TextInput, Button, StyleSheet, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { MyUserContext } from '../configs/UserContexts';
 import { endpoints } from '../configs/APIs';
 import axios from '../configs/APIs';
 
-const CreatePostScreen = ({ navigation }) => {
+const CreatePostScreen = ({ navigation, route }) => {
     const [content, setContent] = useState('');
     const [images, setImages] = useState([]);
-    const user = useContext(MyUserContext);
+    const [surveyType, setSurveyType] = useState('');
+    const [endTime, setEndTime] = useState('');
+    const [questions, setQuestions] = useState([{ question: '', options: [{ option: '' }] }]);
+
+    useEffect(() => {
+        if (route.params?.surveyType) setSurveyType(route.params.surveyType);
+        if (route.params?.endTime) setEndTime(new Date(route.params.endTime));
+        if (route.params?.questions) setQuestions(route.params.questions);
+    }, [route.params]);
 
     // Chọn ảnh từ thư viện
     const pickImages = async () => {
@@ -50,7 +57,6 @@ const CreatePostScreen = ({ navigation }) => {
 
         const formData = new FormData();
         formData.append('content', content);
-        formData.append('user', user.id); // Gửi ID người dùng để xác định ai đang đăng bài
 
         // Thêm ảnh vào formData
         images.forEach((image, index) => {
@@ -60,25 +66,54 @@ const CreatePostScreen = ({ navigation }) => {
                 name: `image-${index}.jpg`,
             });
         });
+        
+        const isSurveyTypeValid = surveyType !== '';
+        const isEndTimeValid = endTime instanceof Date && !isNaN(endTime);
+        const areQuestionsValid = Array.isArray(questions) && questions.length > 0 && questions.every(q => q.question !== '' && Array.isArray(q.options) && q.options.length > 0);
 
-        try {
-            const response = await axios.post(endpoints.post, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            if (response.status === 201) {
-                Alert.alert('Đăng bài thành công!');
-                navigation.goBack();
-            } else {
-                Alert.alert('Đăng bài không thành công');
+        if (isSurveyTypeValid && isEndTimeValid && areQuestionsValid) {
+           
+            formData.append('survey_type', surveyType);
+            formData.append('end_time', endTime.toISOString());
+            formData.append('questions', JSON.stringify(questions));
+            console.info(formData);
+            try {
+                const response = await axios.post(endpoints['survey'], formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+                if (response.status === 201) {
+                    Alert.alert('Đăng bài thành công!');
+                    navigation.navigate('HomeStack', { screen: 'HomeScreen' });
+                } else {
+                    Alert.alert('Đăng bài không thành công');
+                }
+            } catch (error) {
+                console.error("Error submitting post:", error);
+                Alert.alert('Đã xảy ra lỗi. Vui lòng thử lại.');
             }
-        } catch (error) {
-            console.error("Error submitting post:", error);
-            Alert.alert('Đã xảy ra lỗi. Vui lòng thử lại.');
         }
+        else
+            try {
+                const response = await axios.post(endpoints.post, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                if (response.status === 201) {
+                    Alert.alert('Đăng bài thành công!');
+                    navigation.goBack();
+                } else {
+                    Alert.alert('Đăng bài không thành công');
+                }
+            } catch (error) {
+                console.error("Error submitting post:", error);
+                Alert.alert('Đã xảy ra lỗi. Vui lòng thử lại.');
+            }
     };
 
     return (
@@ -103,6 +138,8 @@ const CreatePostScreen = ({ navigation }) => {
             </ScrollView>
             <View style={styles.buttonContainer}>
                 <Button title="Chọn ảnh" onPress={pickImages} />
+                <View style={styles.spacing} />
+                <Button title="Tạo khảo sát" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions })} />
                 <View style={styles.spacing} />
                 <Button title="Đăng bài" onPress={submitPost} />
             </View>

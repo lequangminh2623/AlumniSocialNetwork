@@ -17,6 +17,7 @@ export const endpoints = {
     'expired-teacher': 'teacher/expired/',
     'reset-teacher': teacherId => `/teacher/${teacherId}/reset/`,
     'react': (postId) => `/post/${postId}/react/`,
+    'survey': '/survey/',
 }
 
 export const getPostComments = async (postId) => {
