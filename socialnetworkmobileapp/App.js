@@ -17,6 +17,7 @@ import Administration from './components/Administration/Administration';
 import ResetTimer from './components/Administration/ResetTimer';
 import CreatePostScreen from './components/CreatePostScreen';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import CreateSurvey from './components/CreateSurvey';
 
 const Stack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
@@ -44,6 +45,7 @@ const HomeStackNavigator = () => {
             />
             <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} options={{ headerShown: false, title: 'Tạo bài viết' }} />
+            <Stack.Screen name="CreateSurveyScreen" component={CreateSurvey} options={{ headerShown: false, title: 'Tạo khảo sát' }}/>
         </Stack.Navigator>
     );
 };
