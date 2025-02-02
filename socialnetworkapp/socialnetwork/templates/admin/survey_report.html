@@ -41,7 +41,8 @@
                     let questionDiv = document.createElement('div');
                     questionDiv.id = 'question_' + index;
                     questionDiv.classList.add('question-container'); // Thêm class
-                    document.getElementById('charts-container').appendChild(questionDiv);                let chartDiv = document.createElement('div');
+                    document.getElementById('charts-container').appendChild(questionDiv);
+                    let chartDiv = document.createElement('div');
                     chartDiv.id = 'chart_container_' + index;
                     chartDiv.classList.add('chart-container');
                     questionDiv.appendChild(chartDiv);
@@ -54,15 +55,6 @@
                 });
             })
             .catch(error => console.error('Error fetching data:', error));
-        }
-
-        function generateRandomColors(numberOfColors) {
-            const colors = [];
-            for (let i = 0; i < numberOfColors; i++) {
-                const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
-                colors.push(randomColor);
-            }
-            return colors;
         }
 
         function drawChart(question, chartId) {
@@ -91,7 +83,7 @@
                     width: '80%', height: '70%', left: '20%', top: '20%'
                 },
                 legend: { position: 'right', textStyle: { fontSize: 12 } },
-                colors: generateRandomColors(question.options.length),
+                colors: ["#4285F4", "#EA4335", "#FBBC04", "#34A853", "#673AB7", "#8AB4F8", "#5E35B1", "#81C995", "#F8F9FA"],
                 fontSize: 13,
                 titleTextStyle: {
                     fontSize: 16,

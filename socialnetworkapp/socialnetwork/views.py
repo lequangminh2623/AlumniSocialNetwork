@@ -202,7 +202,6 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
                         status=status.HTTP_200_OK)
 
 
-
 class CommentViewSet(viewsets.ViewSet):
     queryset = Comment.objects.filter(active=True)
     serializer_class = CommentSerializer
@@ -249,6 +248,7 @@ class CommentViewSet(viewsets.ViewSet):
             serializer.save(user=request.user, post=comment.post, parent=comment)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ReactionViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Reaction.objects.filter(active=True)
@@ -679,4 +679,4 @@ class InvitationPostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Ret
         """
         recipient_email = [user.email]
 
-        send_email_async.delay(subject, message, recipient_list)
+        send_email_async.delay(subject, message, recipient_email)

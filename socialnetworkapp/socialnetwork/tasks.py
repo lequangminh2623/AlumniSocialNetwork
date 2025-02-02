@@ -86,9 +86,6 @@ def delete_permanently_after_30_days():
 
 @shared_task
 def send_email_async(subject, message, recipient_email):
-    """
-       Tác vụ celery để gửi email.
-       """
     send_mail(
         subject=subject,
         message=message,
