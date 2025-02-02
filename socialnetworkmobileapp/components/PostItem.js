@@ -72,7 +72,7 @@ export const PostItem = ({ post }) => {
                     <Text style={styles.username}>{post.user.username}</Text>
                     <Text style={styles.postTime}>{formatDate(post.created_date)}</Text>
                 </View>
-                <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetail", { post })} />
+                <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetailScreen", { post })} />
             </View>
 
             {/* Nội dung bài viết */}
