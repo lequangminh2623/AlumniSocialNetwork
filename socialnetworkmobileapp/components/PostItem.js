@@ -26,7 +26,7 @@ export const PostItem = ({ post }) => {
 
     const [commentCount, setCommentCount] = useState(0);
     const [reactCount, setReactCount] = useState(0);
-    
+
     const [selectedReaction, setSelectedReaction] = useState(null);
     const [showReactions, setShowReactions] = useState(false);
 
@@ -62,10 +62,26 @@ export const PostItem = ({ post }) => {
             setReactCount(reacts.length);
 
             const userReact = reacts.find((react) => react.user.id === user.id);
-            setSelectedReaction(userReact ? userReact.id : null);
+            setSelectedReaction(userReact ? userReact.reaction : null); 
             setShowReactions(false);
         } catch (error) {
             console.error("Error reacting to post:", error);
+        }
+    };
+
+    const handleRemoveReact = async () => {
+        try {
+            const token = await AsyncStorage.getItem("token");
+            const api = authApis(token);
+            
+            await api.post(endpoints.react(post.id));
+            
+            setSelectedReaction(null);
+            const reacts = await getPostReacts(post.id);
+            setReactCount(reacts.length);
+            setShowReactions(false);
+        } catch (error) {
+            console.error("Error removing reaction:", error);
         }
     };
 
@@ -120,6 +136,12 @@ export const PostItem = ({ post }) => {
                                 <FontAwesome name={reaction.icon} size={20} color={reaction.color} />
                             </TouchableOpacity>
                         ))}
+
+                        {selectedReaction && (
+                            <TouchableOpacity onPress={handleRemoveReact} style={styles.reactionButton}>
+                                <FontAwesome name="times-circle" size={20} color="#FF0000" />
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
                 <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { post })} />
