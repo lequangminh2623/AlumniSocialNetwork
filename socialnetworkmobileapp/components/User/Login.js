@@ -74,8 +74,6 @@ const Login = () => {
             
                 dispatch({ "type": "login", "payload": user.data });
 
-                nav.navigate('HomeStack', { screen: 'HomeScreen' });
-
             }, 100);
            
         } catch (ex) {
