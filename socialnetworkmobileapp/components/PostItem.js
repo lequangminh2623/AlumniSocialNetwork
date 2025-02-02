@@ -7,25 +7,16 @@ import { getPostComments, getPostReacts, authApis, endpoints } from "../configs/
 import { theme } from "../styles/theme";
 import { MyUserContext } from "../configs/UserContexts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import moment from "moment";
+import 'moment/locale/vi';
 
+
+moment.locale("vi");
 export const getValidImageUrl = (url) => {
     if (url.startsWith("image/upload/")) {
         return url.replace(/^image\/upload\//, "");
     }
     return url;
-};
-
-const formatDate = (dateString) => {
-    if (!dateString) return "Unknown date";
-
-    const date = new Date(dateString);
-    const hours = date.getHours().toString().padStart(2, "0");
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0")
-    const year = date.getFullYear();
-
-    return `${hours}:${minutes} - ${day}/${month}/${year}`;
 };
 
 export const PostItem = ({ post }) => {
@@ -35,7 +26,9 @@ export const PostItem = ({ post }) => {
 
     const [commentCount, setCommentCount] = useState(0);
     const [reactCount, setReactCount] = useState(0);
-    const [liked, setLiked] = useState(false);
+    
+    const [selectedReaction, setSelectedReaction] = useState(null);
+    const [showReactions, setShowReactions] = useState(false);
 
     useEffect(() => {
         const fetchComments = async () => {
@@ -44,20 +37,33 @@ export const PostItem = ({ post }) => {
 
             const reacts = await getPostReacts(post.id);
             setReactCount(reacts.length);
-            setLiked(reacts.some(react => react.user.id === user.id));
+
+            const userReact = reacts.find((react) => react.user.id === user.id);
+            setSelectedReaction(userReact ? userReact.reaction : null);
         };
 
         fetchComments();
     }, [post.id]);
 
-    const handleReact = async () => {
+    const reactions = [
+        { id: 1, name: "LIKE", icon: "thumbs-up", color: "#1877F2" },
+        { id: 2, name: "HAHA", icon: "smile-o", color: "#FFD700" },
+        { id: 3, name: "LOVE", icon: "heart", color: "#FF3040" },
+    ];
+
+    const handleReact = async (reactionId) => {
         try {
-            const token = await AsyncStorage.getItem('token');
+            const token = await AsyncStorage.getItem("token");
             const api = authApis(token);
-            await api.post(endpoints.react(post.id));
+            console.info(reactionId);
+            await api.post(endpoints.react(post.id), { reaction: reactionId });
+
             const reacts = await getPostReacts(post.id);
             setReactCount(reacts.length);
-            setLiked(reacts.some(react => react.user.id === user.id));
+
+            const userReact = reacts.find((react) => react.user.id === user.id);
+            setSelectedReaction(userReact ? userReact.id : null);
+            setShowReactions(false);
         } catch (error) {
             console.error("Error reacting to post:", error);
         }
@@ -70,7 +76,7 @@ export const PostItem = ({ post }) => {
                 <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.avatar} />
                 <View>
                     <Text style={styles.username}>{post.user.username}</Text>
-                    <Text style={styles.postTime}>{formatDate(post.created_date)}</Text>
+                    <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>
                 </View>
                 <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetailScreen", { post })} />
             </View>
@@ -93,10 +99,29 @@ export const PostItem = ({ post }) => {
 
             {/* Thanh tương tác */}
             <View style={styles.interactions}>
-                <TouchableOpacity onPress={handleReact}>
-                    <FontAwesome name="heart" size={18} color={liked ? theme.colors.rose : theme.colors.textLight} />
+                <TouchableOpacity onPress={() => setShowReactions(!showReactions)}>
+                    <FontAwesome
+                        name={reactions.find((r) => r.id === selectedReaction)?.icon || "thumbs-up"}
+                        size={18}
+                        color={reactions.find((r) => r.id === selectedReaction)?.color || "#888"}
+                    />
                 </TouchableOpacity>
                 <Text style={styles.interactionText}>{reactCount}</Text>
+
+                {/* Danh sách phản ứng */}
+                {showReactions && (
+                    <View style={styles.reactionMenu}>
+                        {reactions.map((reaction) => (
+                            <TouchableOpacity
+                                key={reaction.id}
+                                onPress={() => handleReact(reaction.id)}
+                                style={styles.reactionButton}
+                            >
+                                <FontAwesome name={reaction.icon} size={20} color={reaction.color} />
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
                 <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { post })} />
                 <Text style={styles.interactionText}>{commentCount}</Text>
             </View>
@@ -171,5 +196,21 @@ const styles = StyleSheet.create({
         borderWidth: 0.5,
         borderColor: theme.colors.gray,
         shadowColor: '#000',
-    }
-})
+    },
+    reactionMenu: {
+        flexDirection: "row",
+        position: "absolute",
+        top: 30,
+        backgroundColor: "white",
+        padding: 5,
+        borderRadius: 10,
+        shadowColor: "#000",
+        shadowOpacity: 0.2,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 5,
+        zIndex: 1,
+    },
+    reactionButton: {
+        marginHorizontal: 5,
+    },
+});

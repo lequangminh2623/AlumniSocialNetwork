@@ -1,25 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, Image, FlatList, StyleSheet } from "react-native";
 import { getPostComments } from "../configs/APIs";
+import moment from "moment";
+import 'moment/locale/vi';
+
+moment.locale("vi");
 
 const getValidImageUrl = (url) => {
     if (url.startsWith("image/upload/")) {
         return url.replace(/^image\/upload\//, "");
     }
     return url;
-};
-
-const formatDate = (dateString) => {
-    if (!dateString) return "Unknown date";
-
-    const date = new Date(dateString);
-    const hours = date.getHours().toString().padStart(2, "0");
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
-
-    return `${hours}:${minutes} - ${day}/${month}/${year}`;
 };
 
 const PostDetailScreen = ({ route }) => {
@@ -42,7 +33,7 @@ const PostDetailScreen = ({ route }) => {
                 <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.avatar} />
                 <View>
                     <Text style={styles.username}>{post.user.username}</Text>
-                    <Text style={styles.postTime}>{formatDate(post.created_date)}</Text>
+                    <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>
                 </View>
             </View>
             <Text style={styles.content}>{post.content}</Text>
