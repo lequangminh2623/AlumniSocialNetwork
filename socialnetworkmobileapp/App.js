@@ -16,6 +16,7 @@ import MyUserReducer from './configs/UserReducers';
 import Administration from './components/Administration/Administration';
 import ResetTimer from './components/Administration/ResetTimer';
 import CreatePostScreen from './components/CreatePostScreen';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 const Stack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
@@ -41,7 +42,7 @@ const HomeStackNavigator = () => {
                     )
                 }}
             />
-            <Stack.Screen name="PostDetail" component={PostDetailScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} options={{ headerShown: false, title: 'Tạo bài viết' }} />
         </Stack.Navigator>
     );
@@ -61,7 +62,7 @@ const AdminStackNavigator = () => {
 const ProfileStackNavigator = () => (
     <Stack.Navigator>
         <Stack.Screen name="UserProfileScreen" component={UserProfile} options={{ headerShown: false, title: 'Tài khoản' }} />
-        <Stack.Screen name="ChangePassword" component={ChangePassword} options={{ headerShow: false, title: 'Đổi mật khẩu' }} />
+        <Stack.Screen name="ChangePasswordScreen" component={ChangePassword} options={{ headerShow: false, title: 'Đổi mật khẩu' }} />
     </Stack.Navigator>
 );
 
@@ -92,12 +93,14 @@ export default function App() {
     const [user, dispatch] = useReducer(MyUserReducer, null);
 
     return (
-        <NavigationContainer>
-            <MyUserContext.Provider value={user}>
-                <MyDispatchContext.Provider value={dispatch}>
-                    <TabNavigator />
-                </MyDispatchContext.Provider>
-            </MyUserContext.Provider>
-        </NavigationContainer>
+        <SafeAreaView style={{ flex: 1 }}>
+            <NavigationContainer>
+                <MyUserContext.Provider value={user}>
+                    <MyDispatchContext.Provider value={dispatch}>
+                        <TabNavigator />
+                    </MyDispatchContext.Provider>
+                </MyUserContext.Provider>
+            </NavigationContainer>
+        </SafeAreaView>
     );
 }
