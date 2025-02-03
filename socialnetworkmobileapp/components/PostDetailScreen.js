@@ -4,6 +4,8 @@ import { getPostComments, authApis, endpoints } from "../configs/APIs";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import moment from "moment";
 import 'moment/locale/vi';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 
 moment.locale("vi");
 
@@ -14,12 +16,26 @@ const getValidImageUrl = (url) => {
     return url;
 };
 
+const selectImage = async (setImage) => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: false,
+        quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImage(result.assets[0].uri);
+    }
+};
+
 const PostDetailScreen = ({ navigation, route }) => {
     const { post } = route.params;
     const [comments, setComments] = useState([]);
     const [commentContent, setCommentContent] = useState(null);
     const [replyContent, setReplyContent] = useState(null);
     const [replyingTo, setReplyingTo] = useState(null);
+    const [commentImage, setCommentImage] = useState(null);
+    const [replyImage, setReplyImage] = useState(null);
     const cleanAvatarUrlAvatar = post.user.avatar.replace(/^image\/upload\//, "");
 
     useEffect(() => {
@@ -36,8 +52,25 @@ const PostDetailScreen = ({ navigation, route }) => {
             if (!commentContent) return;
             const token = await AsyncStorage.getItem("token");
             const api = authApis(token);
-            await api.post(`/post/${post.id}/comment/`, { content: commentContent });
+
+            const formData = new FormData();
+            formData.append('content', commentContent);
+            if (commentImage) {
+                formData.append('image', {
+                    uri: commentImage,
+                    type: 'image/jpeg',
+                    name: 'comment-image.jpg',
+                });
+            }
+
+            await api.post(`/post/${post.id}/comment/`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
             setCommentContent("");
+            setCommentImage(null);
             const data = await getPostComments(post.id);
             setComments(data);
         } catch (error) {
@@ -50,8 +83,25 @@ const PostDetailScreen = ({ navigation, route }) => {
             if (!replyContent) return;
             const token = await AsyncStorage.getItem("token");
             const api = authApis(token);
-            await api.post(`/comment/${commentId}/reply/`, { content: replyContent });
+
+            const formData = new FormData();
+            formData.append('content', replyContent);
+            if (replyImage) {
+                formData.append('image', {
+                    uri: replyImage,
+                    type: 'image/jpeg',
+                    name: 'reply-image.jpg',
+                });
+            }
+
+            await api.post(`/comment/${commentId}/reply/`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
             setReplyContent("");
+            setReplyImage(null);
             setReplyingTo(null);
             const data = await getPostComments(post.id);
             setComments(data);
@@ -105,8 +155,22 @@ const PostDetailScreen = ({ navigation, route }) => {
                                 placeholder="Viết bình luận..."
                                 multiline
                             />
-                            <Button title="Gửi" onPress={handleComment} />
+                            
+                            <TouchableOpacity onPress={() => selectImage(setCommentImage)}>
+                                <Ionicons name="image-outline" size={24} color="blue" />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.sendButton} onPress={handleComment}>
+                                <Text style={styles.sendButtonText}>Gửi</Text>
+                            </TouchableOpacity>
                         </View>
+                        {commentImage && (
+                            <View style={styles.selectedImageContainer}>
+                                <Image source={{ uri: commentImage }} style={styles.selectedImage} />
+                                <TouchableOpacity onPress={() => setCommentImage(null)}>
+                                    <Ionicons name="close-circle" size={24} color="red" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     </View>
                 }
                 extraData={comments}
@@ -114,9 +178,14 @@ const PostDetailScreen = ({ navigation, route }) => {
                     <View style={styles.comment}>
                         <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.commentAvatar} />
                         <View>
-                            <Text style={styles.commentUser}>{item.user.username}</Text>
+                            <View style={styles.commentHeader}>
+                                <Text style={styles.commentUser}>{item.user.username}</Text>
+                                <Text style={styles.commentTime}>{moment(item.created_date).fromNow()}</Text>
+                            </View>
                             <Text style={styles.commentText}>{item.content}</Text>
-                            <Text style={styles.commentTime}>{moment(item.created_date).fromNow()}</Text>
+                            {item.image && (
+                                <Image source={{ uri: getValidImageUrl(item.image) }} style={styles.commentImage} />
+                            )}
                             <TouchableOpacity onPress={() => setReplyingTo(item.id)}>
                                 <Text style={styles.replyButton}>Reply</Text>
                             </TouchableOpacity>
@@ -129,7 +198,21 @@ const PostDetailScreen = ({ navigation, route }) => {
                                         placeholder="Viết bình luận..."
                                         multiline
                                     />
-                                    <Button title="Gửi" onPress={() => handleReply(item.id)} />
+                                    
+                                    <TouchableOpacity onPress={() => selectImage(setReplyImage)}>
+                                        <Ionicons name="image-outline" size={24} color="blue" />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.sendButton} onPress={() => handleReply(item.id)}>
+                                        <Text style={styles.sendButtonText}>Gửi</Text>
+                                    </TouchableOpacity>
+                                    {replyImage && (
+                                        <View style={styles.selectedImageContainer}>
+                                            <Image source={{ uri: replyImage }} style={styles.selectedImage} />
+                                            <TouchableOpacity onPress={() => setReplyImage(null)}>
+                                                <Ionicons name="close-circle" size={24} color="red" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
                                 </View>
                             )}
                         </View>
@@ -181,8 +264,12 @@ export const styles = StyleSheet.create({
     },
     comment: { 
         flexDirection: "row", 
-        alignItems: "center", 
+        alignItems: "flex-start", 
         marginTop: 10 
+    },
+    commentHeader: {
+        flexDirection: "row",
+        alignItems: "center",
     },
     commentAvatar: { 
         width: 30, 
@@ -191,7 +278,8 @@ export const styles = StyleSheet.create({
         marginRight: 10 
     },
     commentUser: { 
-        fontWeight: "bold" 
+        fontWeight: "bold",
+        marginRight: 10,
     },
     commentText: { 
         fontSize: 14 
@@ -247,6 +335,35 @@ export const styles = StyleSheet.create({
     },
     surveyButton: {
         color: '#007BFF',
+    },
+    commentImage: {
+        width: 100,
+        height: 100,
+        borderRadius: 10,
+        marginTop: 10,
+    },
+    selectedImageContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    selectedImage: {
+        width: 100,
+        height: 100,
+        borderRadius: 10,
+        marginRight: 10,
+    },
+    sendButton: {
+        backgroundColor: '#007BFF',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 10,
+    },
+    sendButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
     },
 });
 
