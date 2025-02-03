@@ -39,10 +39,87 @@ const PostDetailScreen = ({ navigation, route }) => {
     const [replyImage, setReplyImage] = useState(null);
     const cleanAvatarUrlAvatar = post.user.avatar.replace(/^image\/upload\//, "");
 
+    const buildCommentTree = (comments) => {
+        if (!Array.isArray(comments)) return [];
+        let commentMap = new Map();
+        let rootComments = [];
+        
+        comments.forEach(comment => {
+            comment.replies = [];
+            commentMap.set(comment.id, comment);
+        });
+        
+        comments.forEach(comment => {
+            if (comment.parent) {
+                commentMap.get(comment.parent)?.replies.push(comment);
+            } else {
+                rootComments.push(comment);
+            }
+        });
+        
+        return rootComments;
+    };
+    
+    const CommentItem = ({ comment, onReply }) => {
+        return (
+            <View style={styles.comment}>
+                <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.commentAvatar} />
+                <View>
+                    <View style={styles.commentHeader}>
+                        <Text style={styles.commentUser}>{comment.user.username}</Text>
+                        <Text style={styles.commentTime}>{moment(comment.created_date).fromNow()}</Text>
+                    </View>
+                    <Text style={styles.commentText}>{comment.content}</Text>
+                    {comment.image && (
+                        <Image source={{ uri: getValidImageUrl(comment.image) }} style={styles.commentImage} />
+                    )}
+                    <TouchableOpacity onPress={() => setReplyingTo(comment.id)}>
+                        <Text style={styles.replyButton}>Trả lời</Text>
+                    </TouchableOpacity>
+
+                    {replyingTo === comment.id && (
+                        <View>
+                            <View style={styles.replyContainer}>
+                                <TextInput
+                                    style={styles.replyInput}
+                                    value={replyContent}
+                                    onChangeText={setReplyContent}
+                                    placeholder="Viết bình luận..."
+                                    multiline
+                                />
+
+                                <TouchableOpacity onPress={() => selectImage(setReplyImage)}>
+                                    <Ionicons name="image-outline" size={24} color="blue" />
+                                </TouchableOpacity>
+                                <IconButton icon="send" iconColor="#007BFF" size={30} onPress={() => handleReply(comment.id)} />
+
+                            </View>
+                            {replyImage && (
+                                <View style={styles.selectedImageContainer}>
+                                    <Image source={{ uri: replyImage }} style={styles.selectedImage} />
+                                    <TouchableOpacity onPress={() => setReplyImage(null)}>
+                                        <Ionicons name="close-circle" size={24} color="red" />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                        </View>
+                    )}
+                    {comment.replies?.length > 0 && (
+                        <View style={styles.repliesContainer}>
+                            {comment.replies.map(reply => (
+                                <CommentItem key={reply.id} comment={reply} onReply={onReply} />
+                            ))}
+                        </View>
+                    )}
+                </View>
+            </View>
+        );
+    };
+
     useEffect(() => {
         const fetchComments = async () => {
             const data = await getPostComments(post.id);
-            setComments(data);
+            setComments(buildCommentTree(data));
         };
 
         fetchComments();
@@ -73,7 +150,7 @@ const PostDetailScreen = ({ navigation, route }) => {
             setCommentContent("");
             setCommentImage(null);
             const data = await getPostComments(post.id);
-            setComments(data);
+            setComments(buildCommentTree(data));
             if (onCommentAdded) {
                 onCommentAdded();
             }
@@ -180,58 +257,14 @@ const PostDetailScreen = ({ navigation, route }) => {
                     </View>
                 }
                 extraData={comments}
-                renderItem={({ item }) => (
-                    <View style={styles.comment}>
-                        <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.commentAvatar} />
-                        <View>
-                            <View style={styles.commentHeader}>
-                                <Text style={styles.commentUser}>{item.user.username}</Text>
-                                <Text style={styles.commentTime}>{moment(item.created_date).fromNow()}</Text>
-                            </View>
-                            <Text style={styles.commentText}>{item.content}</Text>
-                            {item.image && (
-                                <Image source={{ uri: getValidImageUrl(item.image) }} style={styles.commentImage} />
-                            )}
-                            <TouchableOpacity onPress={() => setReplyingTo(item.id)}>
-                                <Text style={styles.replyButton}>Trả lời</Text>
-                            </TouchableOpacity>
-
-                            {replyingTo === item.id && (
-                                <View>
-                                    <View style={styles.replyContainer}>
-                                        <TextInput
-                                            style={styles.replyInput}
-                                            value={replyContent}
-                                            onChangeText={setReplyContent}
-                                            placeholder="Viết bình luận..."
-                                            multiline
-                                        />
-
-                                        <TouchableOpacity onPress={() => selectImage(setReplyImage)}>
-                                            <Ionicons name="image-outline" size={24} color="blue" />
-                                        </TouchableOpacity>
-                                        <IconButton icon="send" iconColor="#007BFF" size={30} onPress={() => handleReply(item.id)} />
-
-                                    </View>
-                                    {replyImage && (
-                                        <View style={styles.selectedImageContainer}>
-                                            <Image source={{ uri: replyImage }} style={styles.selectedImage} />
-                                            <TouchableOpacity onPress={() => setReplyImage(null)}>
-                                                <Ionicons name="close-circle" size={24} color="red" />
-                                            </TouchableOpacity>
-                                        </View>
-                                    )}
-                                </View>
-                            )}
-                        </View>
-                    </View>
-                )}
+                renderItem={({ item }) => <CommentItem comment={item} onReply={setReplyingTo} />}
             />
         </KeyboardAvoidingView>
     );
 };
 
 export const styles = StyleSheet.create({
+    commentContainer: { flexDirection: "row", marginTop: 10 },
     container: {
         padding: 16,
         backgroundColor: "#fff",

@@ -82,7 +82,7 @@ const TabNavigator = () => {
                 </>
             ) : (
                 <>
-                    <Tab.Screen name="HomeStack" component={HomeStackNavigator} options={{ title: 'Màn hình chính', tabBarIcon: ({ color, size }) => <Icon name="home" color={color} size={size} /> }} />
+                    <Tab.Screen name="HomeStack" component={HomeStackNavigator} options={{ title: 'Trang chủ', tabBarIcon: ({ color, size }) => <Icon name="home" color={color} size={size} /> }} />
                     {user.role === 0 && (
                         <Tab.Screen name="AdminStack" component={AdminStackNavigator} options={{ title: 'Quản trị', tabBarIcon: ({ color, size }) => <Icon name="account-check" color={color} size={size} /> }} />
                     )}
