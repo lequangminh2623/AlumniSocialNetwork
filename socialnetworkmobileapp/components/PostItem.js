@@ -9,6 +9,7 @@ import { MyUserContext } from "../configs/UserContexts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import moment from "moment";
 import 'moment/locale/vi';
+import { Ionicons } from '@expo/vector-icons';
 
 
 moment.locale("vi");
@@ -139,7 +140,7 @@ export const PostItem = ({ post }) => {
 
                         {selectedReaction && (
                             <TouchableOpacity onPress={handleRemoveReact} style={styles.reactionButton}>
-                                <FontAwesome name="times-circle" size={20} color="#FF0000" />
+                                <Ionicons name="close-circle" size={20} color="red" />
                             </TouchableOpacity>
                         )}
                     </View>
