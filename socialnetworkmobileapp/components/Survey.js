@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
-import { Button, Checkbox, RadioButton } from 'react-native-paper'; // Using react-native-paper for Checkbox and RadioButton
-import { getSurveyData } from "../configs/APIs";
+import { View, Text, ScrollView, StyleSheet, Image, Alert } from 'react-native';
+import { Button, Checkbox, RadioButton } from 'react-native-paper';
+import { authApis, endpoints, getSurveyData } from "../configs/APIs";
 import { getValidImageUrl } from "./PostItem";
 import moment from "moment";
 import 'moment/locale/vi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 moment.locale("vi");
 
@@ -19,6 +20,17 @@ const Survey = ({ route }) => {
     const { post } = route.params;
     const [survey, setSurvey] = useState({});
     const [selectedOptions, setSelectedOptions] = useState({});
+    const [token, setToken] = useState(null);
+    const [hasCompleted, setHasCompleted] = useState(false)
+
+    useEffect(() => {
+        const fetchToken = async () => {
+            const storedToken = await AsyncStorage.getItem("token");
+            setToken(storedToken);
+        };
+
+        fetchToken();
+    }, []);
 
     useEffect(() => {
         const fetchSurvey = async () => {
@@ -26,7 +38,31 @@ const Survey = ({ route }) => {
             setSurvey(surveyData);
         };
         fetchSurvey();
-    }, [post.id]);
+
+        const fetchDraft = async () => {
+            try {
+                const response = await authApis(token).get(endpoints['resume'](post.id));
+                if (response.status === 200) {
+                    setHasCompleted(response.data.has_completed)
+                    if (response.data.answers){
+                        const draftAnswers = response.data.answers;
+                        
+                        const formattedAnswers = draftAnswers.reduce((acc, answer) => {
+                            acc[answer.question_id] = answer.selected_options;
+                            return acc;
+                        }, {});
+                        setSelectedOptions(formattedAnswers);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching draft:', error);
+            }
+        };
+
+        fetchSurvey();
+        if(token)
+            fetchDraft();
+    }, [post.id, token]);
 
     const handleCheckboxChange = (questionId, optionId) => {
         setSelectedOptions((prevState) => {
@@ -52,15 +88,48 @@ const Survey = ({ route }) => {
         }));
     };
 
-    const handleSaveDraft = () => {
-        // Implement save draft functionality
-        console.log('Draft saved', selectedOptions);
+    const handleSaveDraft = async () => {
+        try {
+            const response = await authApis(token).post(endpoints['draft'](post.id), {
+                answers: selectedOptions,
+            });
+            if (response.status === 201 || response.status === 200) {
+                Alert.alert('Kháo sát' ,'Khảo sát được lưu nháp thành công!');
+            } else {
+                Alert.alert('Khảo sát' ,'Bạn không có quyền lưu nháp khảo sát này hoặc đã hồi đáp trước đó.');
+            }
+        } catch (error) {
+            console.error('Error saving draft:', error);
+            Alert.alert('Khảo sát', 'Xảy ra lỗi trong quá trình lưu nháp.');
+        }
     };
 
-    const handleSubmit = () => {
-        // Implement submit functionality
-        console.log('Survey submitted', selectedOptions);
+    const handleSubmit = async () => {
+        const unansweredQuestions = survey.questions.filter(
+            (question) => !selectedOptions[question.id] || selectedOptions[question.id].length === 0
+        );
+
+        if (unansweredQuestions.length > 0) {
+            Alert.alert('Khảo sát', 'Vui lòng trả lời tất cả các câu hỏi.');
+            return;
+        }
+
+        try {
+            const response = await authApis(token).post(endpoints['submit'](post.id), {
+                answers: selectedOptions,
+            });
+            if (response.status === 201) {
+                Alert.alert('Kháo sát' ,'Khảo sát được gửi thành công!');
+            } else {
+                Alert.alert('Khảo sát' ,'Bạn không có quyền trả lời khảo sát này hoặc đã hồi đáp trước đó.');
+            }
+        } catch (error) {
+            console.error('Error submitting survey:', error);
+            Alert.alert('Khảo sát', 'Xảy ra lỗi trong quá trình lưu nháp.');
+        }
     };
+
+    
 
     const renderQuestion = (question) => (
         <View key={question.id} style={styles.questionContainer}>
@@ -87,40 +156,46 @@ const Survey = ({ route }) => {
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <View style={styles.postContainer}>
-                <View style={styles.post}>
-                    <Image source={{ uri: post.user.avatar.replace(/^image\/upload\//, "") }} style={styles.avatar} />
-                    <View>
-                        <Text style={styles.username}>{post.user.username}</Text>
-                        <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>
+            {hasCompleted ? (
+                <Text style={styles.completedText}>Bạn đã hoàn thành khảo sát này.</Text>
+            ) : (
+                <>
+                <View style={styles.postContainer}>
+                    <View style={styles.post}>
+                        <Image source={{ uri: post.user.avatar.replace(/^image\/upload\//, "") }} style={styles.avatar} />
+                        <View>
+                            <Text style={styles.username}>{post.user.username}</Text>
+                            <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>
+                        </View>
+                        <View style={{ flex: 1, alignItems: "flex-end" }}>
+                            <Text style={styles.surveyType}>Loại khảo sát: {surveyTypes[survey.survey_type]}</Text>
+                            <Text style={styles.endTime}>Hạn chót: {moment(survey.end_time).format('LLL')}</Text>
+                        </View>
                     </View>
-                    <View style={{ flex: 1, alignItems: "flex-end" }}>
-                        <Text style={styles.surveyType}>Loại khảo sát: {surveyTypes[survey.survey_type]}</Text>
-                        <Text style={styles.endTime}>Hạn chót: {moment(survey.end_time).format('LLL')}</Text>
-                    </View>
+                    <Text style={styles.content}>{post.content}</Text>
+                    {post.images && post.images.length > 0 && (
+                        <View style={styles.imagesContainer}>
+                            {post.images.map((image, index) => (
+                                <Image
+                                    key={index}
+                                    source={{ uri: getValidImageUrl(image.image) }}
+                                    style={styles.postImage}
+                                />
+                            ))}
+                        </View>
+                    )}
                 </View>
-                <Text style={styles.content}>{post.content}</Text>
-                {post.images && post.images.length > 0 && (
-                    <View style={styles.imagesContainer}>
-                        {post.images.map((image, index) => (
-                            <Image
-                                key={index}
-                                source={{ uri: getValidImageUrl(image.image) }}
-                                style={styles.postImage}
-                            />
-                        ))}
-                    </View>
-                )}
-            </View>
-            {survey.questions && survey.questions.map(renderQuestion)}
-            <View style={styles.buttonContainer}>
-                <Button mode="contained" onPress={handleSaveDraft} style={styles.button}>
-                    Lưu nháp
-                </Button>
-                <Button mode="contained" onPress={handleSubmit} style={styles.button}>
-                    Gửi
-                </Button>
-            </View>
+                {survey.questions && survey.questions.map(renderQuestion)}
+                <View style={styles.buttonContainer}>
+                    <Button mode="contained" onPress={handleSaveDraft} style={styles.button}>
+                        Lưu nháp
+                    </Button>
+                    <Button mode="contained" onPress={handleSubmit} style={styles.button}>
+                        Gửi
+                    </Button>
+                </View>
+                </>
+            )}
         </ScrollView>
     );
 };
@@ -199,6 +274,16 @@ const styles = StyleSheet.create({
         width: '30%',
         margin: 16,
     },
+    completedText: {
+        fontFamily: 'Roboto',
+        fontSize: 20,
+        fontWeight: '400',
+        fontStyle: 'italic',
+        color: '#666',
+        lineHeight: 24,
+        textAlign: 'center',
+        marginHorizontal: 16,
+      },
 });
 
 export default Survey;

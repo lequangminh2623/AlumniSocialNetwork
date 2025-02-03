@@ -19,6 +19,9 @@ export const endpoints = {
     'react': (postId) => `/post/${postId}/react/`,
     'survey': '/survey/',
     'survey-detail': surveyId => `/survey/${surveyId}/`,
+    'draft': surveyId => `/survey/${surveyId}/draft/`,
+    'submit': surveyId => `/survey/${surveyId}/submit/`,
+    'resume': surveyId => `/survey/${surveyId}/resume/`,
 }
 
 export const getPostComments = async (postId) => {
