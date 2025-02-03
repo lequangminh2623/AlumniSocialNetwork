@@ -215,9 +215,7 @@ class SurveyPostSerializer(PostSerializer):
 
     class Meta:
         model = SurveyPost
-        fields = ['id', 'content', 'images', 'lock_comment', 'user', 'created_date', 'updated_date', 'end_time',
-                  'survey_type', 'questions']
-
+        fields = ['id', 'end_time', 'survey_type', 'questions']
 
 class UserSurveyOptionSerializer(serializers.ModelSerializer):
     class Meta:

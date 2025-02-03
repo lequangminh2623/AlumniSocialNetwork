@@ -31,10 +31,10 @@ const HomeStackNavigator = () => {
                 name="HomeScreen"
                 component={Home}
                 options={{
-                    title: 'Bài viết',
+                    title: 'Trang chủ',
                     headerRight: () => (
                         <Button
-                            icon="plus-circle-outline"
+                            icon="pencil-plus"
                             mode="text"
                             onPress={() => navigation.navigate('HomeStack', { screen: 'CreatePostScreen' })}
                             labelStyle={{ color: 'black' }}
@@ -44,10 +44,10 @@ const HomeStackNavigator = () => {
                     )
                 }}
             />
-            <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} options={{ headerShown: false, title: 'Tạo bài viết' }} />
-            <Stack.Screen name="CreateSurveyScreen" component={CreateSurvey} options={{ headerShown: false, title: 'Tạo khảo sát' }}/>
-            <Stack.Screen name="SurveyScreen" component={Survey} options={{ headerShown: false, title: 'Khảo sát' }}/>
+            <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} options={{ title: 'Bài viết'}} />
+            <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} options={{ title: 'Tạo bài viết' }} />
+            <Stack.Screen name="CreateSurveyScreen" component={CreateSurvey} options={{ title: 'Tạo khảo sát' }}/>
+            <Stack.Screen name="SurveyScreen" component={Survey} options={{ title: 'Khảo sát' }}/>
         </Stack.Navigator>
     );
 };
@@ -65,8 +65,8 @@ const AdminStackNavigator = () => {
 };
 const ProfileStackNavigator = () => (
     <Stack.Navigator>
-        <Stack.Screen name="UserProfileScreen" component={UserProfile} options={{ headerShown: false, title: 'Tài khoản' }} />
-        <Stack.Screen name="ChangePasswordScreen" component={ChangePassword} options={{ headerShow: false, title: 'Đổi mật khẩu' }} />
+        <Stack.Screen name="UserProfileScreen" component={UserProfile} options={{ title: 'Tài khoản' }} />
+        <Stack.Screen name="ChangePasswordScreen" component={ChangePassword} options={{ title: 'Đổi mật khẩu' }} />
     </Stack.Navigator>
 );
 
@@ -77,16 +77,16 @@ const TabNavigator = () => {
         <Tab.Navigator>
             {user === null ? (
                 <>
+                <Tab.Screen name="LoginScreen" component={Login} options={{ title: 'Đăng nhập', tabBarIcon: ({ color, size }) => <Icon name="login" color={color} size={size} /> }} />
                     <Tab.Screen name="RegisterScreen" component={Register} options={{ title: 'Đăng ký', tabBarIcon: ({ color, size }) => <Icon name="account-plus" color={color} size={size} /> }} />
-                    <Tab.Screen name="LoginScreen" component={Login} options={{ title: 'Đăng nhập', tabBarIcon: ({ color, size }) => <Icon name="login" color={color} size={size} /> }} />
                 </>
             ) : (
                 <>
                     <Tab.Screen name="HomeStack" component={HomeStackNavigator} options={{ title: 'Màn hình chính', tabBarIcon: ({ color, size }) => <Icon name="home" color={color} size={size} /> }} />
-                    <Tab.Screen name="ProfileStack" component={ProfileStackNavigator} options={{ title: 'Tài khoản', tabBarIcon: ({ color, size }) => <Icon name="account" color={color} size={size} /> }} />
                     {user.role === 0 && (
                         <Tab.Screen name="AdminStack" component={AdminStackNavigator} options={{ title: 'Quản trị', tabBarIcon: ({ color, size }) => <Icon name="account-check" color={color} size={size} /> }} />
                     )}
+                    <Tab.Screen name="ProfileStack" component={ProfileStackNavigator} options={{ title: 'Tài khoản', tabBarIcon: ({ color, size }) => <Icon name="account" color={color} size={size} /> }} />
                 </>
             )}
         </Tab.Navigator>

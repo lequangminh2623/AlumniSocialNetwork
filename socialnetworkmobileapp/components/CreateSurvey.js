@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, TextInput, Text, ScrollView, Switch, StyleSheet } from 'react-native';
+import { View, TextInput, Text, ScrollView, Switch, StyleSheet, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { IconButton, Button } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 
 const surveyTypes = [
     { label: 'Training Program', value: 1 },
@@ -11,11 +12,12 @@ const surveyTypes = [
     { label: 'Employment Situation', value: 4 },
 ];
 
-const CreateSurvey = ({ navigation, route }) => {
+const CreateSurvey = ({ route }) => {
     const [surveyType, setSurveyType] = useState(route.params?.surveyType || 1);
     const [endTime, setEndTime] = useState(route.params?.endTime || new Date());
     const [questions, setQuestions] = useState(route.params?.questions || [{ question: '', options: [{ option: '' }], multi_choice: false }]);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const navigation = useNavigation();
 
     const handleAddQuestion = () => {
         setQuestions([...questions, { question: '', options: [{ option: '' }], multi_choice: false }]);
@@ -74,7 +76,14 @@ const CreateSurvey = ({ navigation, route }) => {
     };
 
     const handleSubmitSurvey = () => {
-        navigation.navigate('CreatePostScreen', { surveyType, endTime: endTime.toISOString(), questions });
+        const isSurveyTypeValid = surveyType !== '';
+        const isEndTimeValid = endTime instanceof Date && !isNaN(endTime);
+        const areQuestionsValid = Array.isArray(questions) && questions.length > 0 && questions.every(q => q.question !== '' && Array.isArray(q.options) && q.options.length > 0);
+
+        if (isSurveyTypeValid && isEndTimeValid && areQuestionsValid)
+            navigation.navigate('CreatePostScreen', { surveyType, endTime: endTime.toISOString(), questions });
+        else
+            Alert.alert('Tạo khảo sát','Vui lòng điền đầy đủ thông tin.');
     };
 
     const handleDeleteQuestion = (qIndex) => {
@@ -180,7 +189,7 @@ const CreateSurvey = ({ navigation, route }) => {
                 onPress={handleAddQuestion}
                 style={styles.addButton}
             />
-            <Button title="Hoàn tất" onPress={handleSubmitSurvey} />
+            <Button mode="contained" style={{marginTop: 50}} onPress={handleSubmitSurvey}>Hoàn tất</Button>
         </ScrollView>
     );
 };

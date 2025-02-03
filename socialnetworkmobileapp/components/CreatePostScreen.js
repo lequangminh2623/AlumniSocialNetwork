@@ -6,14 +6,16 @@ import { Button } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { endpoints } from '../configs/APIs';
 import axios from '../configs/APIs';
+import { useNavigation } from '@react-navigation/native';
 
-const CreatePostScreen = ({ navigation, route }) => {
+const CreatePostScreen = ({ route }) => {
     const user = useContext(MyUserContext);
     const [content, setContent] = useState('');
     const [images, setImages] = useState([]);
     const [surveyType, setSurveyType] = useState('');
     const [endTime, setEndTime] = useState('');
     const [questions, setQuestions] = useState([{ question: '', options: [{ option: '' }] }]);
+    const navigation = useNavigation();
 
     useEffect(() => {
         if (route.params?.surveyType) setSurveyType(route.params.surveyType);
@@ -56,7 +58,7 @@ const CreatePostScreen = ({ navigation, route }) => {
             return;
         }
 
-        const token = await getToken(); // Lấy token từ AsyncStorage
+        const token = await getToken();
 
         const formData = new FormData();
         formData.append('content', content);
@@ -147,7 +149,7 @@ const CreatePostScreen = ({ navigation, route }) => {
             </ScrollView>
             <View style={styles.buttonContainer}>
                 <Button style={{ borderRadius: 0 }} mode="outlined" onPress={pickImages}>Chọn ảnh</Button>
-                <Button style={{ borderRadius: 0 }} mode="outlined" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions })}>Tạo khảo sát</Button>
+                {user.role === 0 && <Button style={{ borderRadius: 0 }} mode="outlined" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions })}>Tạo khảo sát</Button>}
                 <Button style={{ borderRadius: 0 }} mode="outlined" onPress={submitPost}>Đăng bài</Button>
             </View>
         </View>

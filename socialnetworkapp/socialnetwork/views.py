@@ -495,24 +495,36 @@ class SurveyPostViewSet(viewsets.ViewSet):
     def draft(self, request, pk=None):
         self.check_permissions(request)
 
-        # Kiểm tra nếu người dùng đã từng trả lời khảo sát này
-        existing_answers = UserSurveyOption.objects.filter(user=request.user,
-                                                           survey_option__survey_question__survey_post=pk)
+        existing_answers = UserSurveyOption.objects.filter(
+            user=request.user, survey_option__survey_question__survey_post=pk
+        )
         if existing_answers.exists():
-            return Response({"error": "You had completed this survey."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "You had completed this survey."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         data = request.data
         survey_post = get_object_or_404(SurveyPost, pk=pk, active=True)
         answers = data.get('answers', {})
 
         formatted_answers = [{'question_id': key, 'selected_options': value} for key, value in answers.items()]
+
+        draft_instance = SurveyDraft.objects.filter(survey_post=survey_post, user=request.user).first()
+
+        if draft_instance:
+            draft_instance.answers = formatted_answers
+            draft_instance.save(update_fields=['answers'])
+            serializer = SurveyDraftSerializer(draft_instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
         draft_data = {
-            'survey_post': survey_post,
+            'survey_post': survey_post.id,
             'user': request.user.id,
             'answers': formatted_answers
         }
 
         serializer = SurveyDraftSerializer(data=draft_data)
+
         if serializer.is_valid():
             serializer.save()
 
@@ -541,16 +553,22 @@ class SurveyPostViewSet(viewsets.ViewSet):
 
     @action(detail=True, url_path='resume', methods=['get'], permission_classes=[OwnerPermission])
     def resume_survey(self, request, pk=None):
-        try:
-            draft = get_object_or_404(SurveyDraft, survey_post_id=pk, user=request.user)
+        draft = SurveyDraft.objects.filter(survey_post_id=pk, user=request.user).first()
 
-            self.check_object_permissions(request, draft)
+        has_completed = UserSurveyOption.objects.filter(user=request.user, survey_option__survey_question__survey_post=pk).exists()
 
+        if not draft:
             return Response({
-                "answers": draft.answers
-            }, status=status.HTTP_200_OK)
-        except SurveyDraft.DoesNotExist:
-            return Response({"error": "Draft not found."}, status=status.HTTP_404_NOT_FOUND)
+            "answers": None,
+            "has_completed": has_completed
+        }, status=status.HTTP_200_OK)
+
+        self.check_object_permissions(request, draft)
+
+        return Response({
+            "answers": draft.answers,
+            "has_completed": has_completed
+        }, status=status.HTTP_200_OK)
 
     @action(detail=True, url_path='submit', methods=['post'], permission_classes=[AlumniPermission])
     def submit_survey(self, request, pk=None):
