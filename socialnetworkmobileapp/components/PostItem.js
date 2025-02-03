@@ -12,6 +12,7 @@ import 'moment/locale/vi';
 import { Ionicons } from '@expo/vector-icons';
 
 
+
 moment.locale("vi");
 export const getValidImageUrl = (url) => {
     if (url.startsWith("image/upload/")) {
@@ -93,7 +94,6 @@ export const PostItem = ({ post }) => {
 
     return (
         <View style={styles.container}>
-            {/* Header */}
             <View style={styles.userInfo}>
                 <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.avatar} />
                 <View>
@@ -103,10 +103,8 @@ export const PostItem = ({ post }) => {
                 <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: handleCommentAdded })} />
             </View>
 
-            {/* Nội dung bài viết */}
             <Text style={styles.content}>{post.content}</Text>
 
-            {/* Hình ảnh */}
             {post.images && post.images.length > 0 && (
                 <View style={styles.imagesContainer}>
                     {post.images.map((image, index) => (
@@ -119,7 +117,6 @@ export const PostItem = ({ post }) => {
                 </View>
             )}
 
-            {/* Thanh tương tác */}
             <View style={styles.interactions}>
                 <TouchableOpacity onPress={() => setShowReactions(!showReactions)}>
                     <FontAwesome
@@ -130,7 +127,6 @@ export const PostItem = ({ post }) => {
                 </TouchableOpacity>
                 <Text style={styles.interactionText}>{reactCount}</Text>
 
-                {/* Danh sách phản ứng */}
                 {showReactions && (
                     <View style={styles.reactionMenu}>
                         {reactions.map((reaction) => (

@@ -4,7 +4,6 @@ import { View, FlatList, ActivityIndicator, Alert, StyleSheet, Image } from 'rea
 import { Text, IconButton, List } from 'react-native-paper';
 import { authApis, endpoints } from '../../configs/APIs';
 import { getValidImageUrl } from '../PostItem';
-import Styles from '../../styles/Styles';
 
 const ResetTimer = () => {
     const [loading, setLoading] = useState(true);
@@ -126,31 +125,31 @@ export default ResetTimer;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f8f8', // Consistent background color
-        paddingHorizontal: 16, // Add horizontal padding to the container
-        paddingTop: 16,       // Add top padding to the container
+        backgroundColor: '#f9f9f9',
+        paddingHorizontal: 16,
+        paddingTop: 16,
     },
     listItem: {
-        padding: 16, // Consistent padding for list items
+        padding: 16,
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#fff',
-        borderRadius: 20, // Slightly less rounded corners
-        marginBottom: 16, // Space between list items
-        elevation: 2,       // Add a subtle shadow (Android)
-        shadowColor: '#000', // Add a subtle shadow (iOS)
+        borderRadius: 20,
+        marginBottom: 16,
+        elevation: 2,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
     avatar: {
-        width: 60,  // Slightly larger avatar
+        width: 60,
         height: 60,
-        borderRadius: 30, // Make it circular
+        borderRadius: 30,
         marginRight: 16,
     },
     textContainer: {
-        flex: 1, // Allow text to take available space
+        flex: 1,
     },
     title: {
         fontSize: 16,

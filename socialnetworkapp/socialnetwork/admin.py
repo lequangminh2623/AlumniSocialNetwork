@@ -1,4 +1,3 @@
-
 from django.contrib import admin
 from django.http import JsonResponse
 from django.template.response import TemplateResponse
@@ -160,7 +159,6 @@ class MyAdminSite(admin.AdminSite):
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({
                     'survey_post': survey_post.content,
-                    'survey_images': list(survey_post.images.all().values_list('image', flat=True)),
                     'data': report_data
                 })
 
