@@ -86,16 +86,21 @@ export const PostItem = ({ post }) => {
         }
     };
 
+    const handleCommentAdded = async () => {
+        const comments = await getPostComments(post.id);
+        setCommentCount(comments.length);
+    };
+
     return (
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.userInfo}>
                 <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.avatar} />
                 <View>
-                    <Text style={styles.username}>{post.user.username}</Text>
+                    <Text style={styles.username}>{post.user.first_name} {post.user.last_name}</Text>
                     <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>
                 </View>
-                <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetailScreen", { post })} />
+                <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: handleCommentAdded })} />
             </View>
 
             {/* Nội dung bài viết */}
@@ -145,7 +150,7 @@ export const PostItem = ({ post }) => {
                         )}
                     </View>
                 )}
-                <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { post })} />
+                <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: handleCommentAdded })} />
                 <Text style={styles.interactionText}>{commentCount}</Text>
             </View>
         </View>

@@ -71,13 +71,13 @@ const CreatePostScreen = ({ route }) => {
                 name: `image-${index}.jpg`,
             });
         });
-        
+
         const isSurveyTypeValid = surveyType !== '';
         const isEndTimeValid = endTime instanceof Date && !isNaN(endTime);
         const areQuestionsValid = Array.isArray(questions) && questions.length > 0 && questions.every(q => q.question !== '' && Array.isArray(q.options) && q.options.length > 0);
 
         if (isSurveyTypeValid && isEndTimeValid && areQuestionsValid) {
-           
+
             formData.append('survey_type', surveyType);
             formData.append('end_time', endTime.toISOString());
             formData.append('questions', JSON.stringify(questions));
@@ -127,7 +127,7 @@ const CreatePostScreen = ({ route }) => {
                 <View style={styles.post}>
                     <Image source={{ uri: user.avatar.replace(/^image\/upload\//, "") }} style={styles.avatar} />
                     <View>
-                        <Text style={styles.username}>{user.username}</Text>
+                        <Text style={styles.username}>{user.first_name} {user.last_name}</Text>
                     </View>
                 </View>
                 <TextInput
@@ -150,7 +150,10 @@ const CreatePostScreen = ({ route }) => {
             <View style={styles.buttonContainer}>
                 <Button style={{ borderRadius: 0 }} mode="outlined" onPress={pickImages}>Chọn ảnh</Button>
                 {user.role === 0 && <Button style={{ borderRadius: 0 }} mode="outlined" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions })}>Tạo khảo sát</Button>}
-                <Button style={{ borderRadius: 0 }} mode="outlined" onPress={submitPost}>Đăng bài</Button>
+            </View>
+            <View style={styles.buttonContainerSubmit}>
+                <Button style={styles.submitButton} mode="contained" onPress={submitPost}>Đăng bài</Button>
+
             </View>
         </View>
     );
@@ -161,20 +164,20 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
-    post: { 
-        flexDirection: "row", 
-        alignItems: "center", 
+    post: {
+        flexDirection: "row",
+        alignItems: "center",
         marginBottom: 30,
     },
-    avatar: { 
-        width: 50, 
-        height: 50, 
-        borderRadius: 25, 
+    avatar: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         marginRight: 10
     },
-    username: { 
-        fontSize: 18, 
-        fontWeight: "bold" 
+    username: {
+        fontSize: 18,
+        fontWeight: "bold"
     },
     scrollView: {
         padding: 20,
@@ -201,6 +204,20 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderColor: 'black',
     },
+    submitButton: {
+        borderRadius: 0,
+        backgroundColor: '#007BFF',
+    },
+    buttonContainerSubmit: {
+        flexDirection: 'column',
+        justifyContent: 'space-around',
+        borderTopWidth: 1,
+        borderColor: 'black',
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        margin: 10,
+    }
 });
 
 export default CreatePostScreen;

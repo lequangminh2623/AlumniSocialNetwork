@@ -244,11 +244,27 @@ class CommentViewSet(viewsets.ViewSet):
         if comment.post.lock_comment:
             return Response({'message': 'Bài viết này đã bị khóa bình luận.'}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = CommentSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user, post=comment.post, parent=comment)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        content = request.data.get('content')
+        image = request.FILES.get('image')
+
+        image_url = None
+        if image:
+            try:
+                upload_result = upload(image, folder='MangXaHoi')  # Upload ảnh lên Cloudinary
+                image_url = upload_result.get('secure_url')
+            except Exception as e:
+                return Response({"error": f"Lỗi đăng ảnh: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        reply = Comment.objects.create(
+            content=content,
+            image=image_url,
+            user=request.user,
+            post=comment.post,
+            parent=comment
+        )
+
+        serializer = CommentSerializer(reply)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class ReactionViewSet(viewsets.ViewSet, generics.ListAPIView):

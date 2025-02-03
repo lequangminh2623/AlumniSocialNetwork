@@ -6,6 +6,7 @@ import moment from "moment";
 import 'moment/locale/vi';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { Icon, IconButton } from "react-native-paper";
 
 moment.locale("vi");
 
@@ -29,7 +30,7 @@ const selectImage = async (setImage) => {
 };
 
 const PostDetailScreen = ({ navigation, route }) => {
-    const { post } = route.params;
+    const { post, onCommentAdded } = route.params;
     const [comments, setComments] = useState([]);
     const [commentContent, setCommentContent] = useState(null);
     const [replyContent, setReplyContent] = useState(null);
@@ -73,6 +74,9 @@ const PostDetailScreen = ({ navigation, route }) => {
             setCommentImage(null);
             const data = await getPostComments(post.id);
             setComments(data);
+            if (onCommentAdded) {
+                onCommentAdded();
+            }
         } catch (error) {
             console.error("Error commenting on post:", error);
         }
@@ -105,6 +109,10 @@ const PostDetailScreen = ({ navigation, route }) => {
             setReplyingTo(null);
             const data = await getPostComments(post.id);
             setComments(data);
+
+            if (onCommentAdded) {
+                onCommentAdded();
+            }
         } catch (error) {
             console.error("Error replying to comment:", error);
         }
@@ -155,13 +163,11 @@ const PostDetailScreen = ({ navigation, route }) => {
                                 placeholder="Viết bình luận..."
                                 multiline
                             />
-                            
+
                             <TouchableOpacity onPress={() => selectImage(setCommentImage)}>
                                 <Ionicons name="image-outline" size={24} color="blue" />
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.sendButton} onPress={handleComment}>
-                                <Text style={styles.sendButtonText}>Gửi</Text>
-                            </TouchableOpacity>
+                            <IconButton icon="send" iconColor="#007BFF" size={30} onPress={handleComment} />
                         </View>
                         {commentImage && (
                             <View style={styles.selectedImageContainer}>
@@ -187,24 +193,26 @@ const PostDetailScreen = ({ navigation, route }) => {
                                 <Image source={{ uri: getValidImageUrl(item.image) }} style={styles.commentImage} />
                             )}
                             <TouchableOpacity onPress={() => setReplyingTo(item.id)}>
-                                <Text style={styles.replyButton}>Reply</Text>
+                                <Text style={styles.replyButton}>Trả lời</Text>
                             </TouchableOpacity>
+
                             {replyingTo === item.id && (
-                                <View style={styles.replyContainer}>
-                                    <TextInput
-                                        style={styles.replyInput}
-                                        value={replyContent}
-                                        onChangeText={setReplyContent}
-                                        placeholder="Viết bình luận..."
-                                        multiline
-                                    />
-                                    
-                                    <TouchableOpacity onPress={() => selectImage(setReplyImage)}>
-                                        <Ionicons name="image-outline" size={24} color="blue" />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.sendButton} onPress={() => handleReply(item.id)}>
-                                        <Text style={styles.sendButtonText}>Gửi</Text>
-                                    </TouchableOpacity>
+                                <View>
+                                    <View style={styles.replyContainer}>
+                                        <TextInput
+                                            style={styles.replyInput}
+                                            value={replyContent}
+                                            onChangeText={setReplyContent}
+                                            placeholder="Viết bình luận..."
+                                            multiline
+                                        />
+
+                                        <TouchableOpacity onPress={() => selectImage(setReplyImage)}>
+                                            <Ionicons name="image-outline" size={24} color="blue" />
+                                        </TouchableOpacity>
+                                        <IconButton icon="send" iconColor="#007BFF" size={30} onPress={() => handleReply(item.id)} />
+
+                                    </View>
                                     {replyImage && (
                                         <View style={styles.selectedImageContainer}>
                                             <Image source={{ uri: replyImage }} style={styles.selectedImage} />
@@ -224,70 +232,70 @@ const PostDetailScreen = ({ navigation, route }) => {
 };
 
 export const styles = StyleSheet.create({
-    container: { 
-        padding: 16, 
-        backgroundColor: "#fff", 
-        flex: 1 
+    container: {
+        padding: 16,
+        backgroundColor: "#fff",
+        flex: 1
     },
-    post: { 
-        flexDirection: "row", 
-        alignItems: "center", 
-        marginBottom: 10 
+    post: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 10
     },
-    avatar: { 
-        width: 40, 
-        height: 40, 
-        borderRadius: 20, 
-        marginRight: 10 
+    avatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        marginRight: 10
     },
-    username: { 
-        fontSize: 16, 
-        fontWeight: "bold" 
+    username: {
+        fontSize: 16,
+        fontWeight: "bold"
     },
-    postTime: { 
-        fontSize: 12, 
-        color: "#888" 
+    postTime: {
+        fontSize: 12,
+        color: "#888"
     },
-    content: { 
-        fontSize: 14, 
-        marginBottom: 10 
+    content: {
+        fontSize: 14,
+        marginBottom: 10
     },
-    postImage: { 
-        width: "100%", 
-        height: 200, 
-        borderRadius: 10 
+    postImage: {
+        width: "100%",
+        height: 200,
+        borderRadius: 10
     },
-    commentTitle: { 
-        fontSize: 18, 
-        fontWeight: "bold", 
-        marginTop: 20 
+    commentTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        marginTop: 20
     },
-    comment: { 
-        flexDirection: "row", 
-        alignItems: "flex-start", 
-        marginTop: 10 
+    comment: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        marginTop: 10
     },
     commentHeader: {
         flexDirection: "row",
         alignItems: "center",
     },
-    commentAvatar: { 
-        width: 30, 
-        height: 30, 
-        borderRadius: 15, 
-        marginRight: 10 
+    commentAvatar: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        marginRight: 10
     },
-    commentUser: { 
+    commentUser: {
         fontWeight: "bold",
         marginRight: 10,
     },
-    commentText: { 
-        fontSize: 14 
+    commentText: {
+        fontSize: 14
     },
     imagesContainer: {
         flexDirection: "column",
-        gap: 10, 
-        marginTop: 10, 
+        gap: 10,
+        marginTop: 10,
     },
     postImage: {
         width: "100%",
@@ -307,7 +315,7 @@ export const styles = StyleSheet.create({
     replyContainer: {
         flexDirection: "row",
         alignItems: "center",
-        marginTop: 5,
+        marginTop: 10,
     },
     replyInput: {
         borderColor: "#ccc",
@@ -348,8 +356,8 @@ export const styles = StyleSheet.create({
         marginTop: 10,
     },
     selectedImage: {
-        width: 100,
-        height: 100,
+        width: 50,
+        height: 50,
         borderRadius: 10,
         marginRight: 10,
     },
