@@ -29,6 +29,8 @@ const selectImage = async (setImage) => {
     }
 };
 
+const MAX_REPLY_DEPTH = 3;
+
 const PostDetailScreen = ({ navigation, route }) => {
     const { post, onCommentAdded } = route.params;
     const [comments, setComments] = useState([]);
@@ -60,9 +62,9 @@ const PostDetailScreen = ({ navigation, route }) => {
         return rootComments;
     };
     
-    const CommentItem = ({ comment, onReply }) => {
+    const CommentItem = ({ comment, onReply, depth = 0 }) => {
         return (
-            <View style={styles.comment}>
+            <View style={[styles.comment, { marginLeft: depth * 20 }]}>
                 <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.commentAvatar} />
                 <View>
                     <View style={styles.commentHeader}>
@@ -73,9 +75,11 @@ const PostDetailScreen = ({ navigation, route }) => {
                     {comment.image && (
                         <Image source={{ uri: getValidImageUrl(comment.image) }} style={styles.commentImage} />
                     )}
-                    <TouchableOpacity onPress={() => setReplyingTo(comment.id)}>
-                        <Text style={styles.replyButton}>Trả lời</Text>
-                    </TouchableOpacity>
+                    {depth < MAX_REPLY_DEPTH && (
+                        <TouchableOpacity onPress={() => setReplyingTo(comment.id)}>
+                            <Text style={styles.replyButton}>Trả lời</Text>
+                        </TouchableOpacity>
+                    )}
 
                     {replyingTo === comment.id && (
                         <View>
@@ -87,12 +91,12 @@ const PostDetailScreen = ({ navigation, route }) => {
                                     placeholder="Viết bình luận..."
                                     multiline
                                 />
-
-                                <TouchableOpacity onPress={() => selectImage(setReplyImage)}>
-                                    <Ionicons name="image-outline" size={24} color="blue" />
-                                </TouchableOpacity>
-                                <IconButton icon="send" iconColor="#007BFF" size={30} onPress={() => handleReply(comment.id)} />
-
+                                <View style={styles.replyActions}>
+                                    <TouchableOpacity onPress={() => selectImage(setReplyImage)}>
+                                        <Ionicons name="image-outline" size={20} color="blue" />
+                                    </TouchableOpacity>
+                                    <IconButton icon="send" iconColor="#007BFF" size={30} onPress={() => handleReply(comment.id)} />
+                                </View>
                             </View>
                             {replyImage && (
                                 <View style={styles.selectedImageContainer}>
@@ -107,7 +111,7 @@ const PostDetailScreen = ({ navigation, route }) => {
                     {comment.replies?.length > 0 && (
                         <View style={styles.repliesContainer}>
                             {comment.replies.map(reply => (
-                                <CommentItem key={reply.id} comment={reply} onReply={onReply} />
+                                <CommentItem key={reply.id} comment={reply} onReply={onReply} depth={depth + 1} />
                             ))}
                         </View>
                     )}
@@ -185,11 +189,14 @@ const PostDetailScreen = ({ navigation, route }) => {
             setReplyImage(null);
             setReplyingTo(null);
             const data = await getPostComments(post.id);
-            setComments(data);
+            setComments(buildCommentTree(data));
 
             if (onCommentAdded) {
                 onCommentAdded();
             }
+
+            const updatedComments = await getPostComments(post.id);
+            setComments(buildCommentTree(updatedComments));
         } catch (error) {
             console.error("Error replying to comment:", error);
         }
@@ -323,7 +330,8 @@ export const styles = StyleSheet.create({
         marginRight: 10,
     },
     commentText: {
-        fontSize: 14
+        fontSize: 14,
+        flex: 1,
     },
     imagesContainer: {
         flexDirection: "column",
@@ -346,6 +354,11 @@ export const styles = StyleSheet.create({
         marginTop: 5,
     },
     replyContainer: {
+        flexDirection: "column",
+        marginTop: 10,
+        flexWrap: "wrap",
+    },
+    replyActions: {
         flexDirection: "row",
         alignItems: "center",
         marginTop: 10,
@@ -356,9 +369,7 @@ export const styles = StyleSheet.create({
         borderRadius: 5,
         padding: 10,
         marginRight: 10,
-        minHeight: 10,
-        minWidth: 250,
-        flex: 1,
+        minWidth: 200,
     },
     commentInputContainer: {
         flexDirection: "row",

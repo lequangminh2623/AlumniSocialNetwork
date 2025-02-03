@@ -1,7 +1,7 @@
 import React from "react";
-import { FlatList, StyleSheet } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import APIs, { endpoints } from "../../configs/APIs";
-import { ActivityIndicator } from "react-native-paper";
+import { ActivityIndicator, Searchbar } from "react-native-paper";
 import { PostItem } from "../PostItem";
 
 const Home = () => {
@@ -9,6 +9,8 @@ const Home = () => {
     const [loading, setLoading] = React.useState(false);
     const [page, setPage] = React.useState(1);
     const [refreshing, setRefreshing] = React.useState(false);
+    const [searchQuery, setSearchQuery] = React.useState("");
+    const [filteredPosts, setFilteredPosts] = React.useState([]);
 
     // Hàm load posts
     const loadPosts = async () => {
@@ -58,9 +60,27 @@ const Home = () => {
         loadPosts();
     }, [page]);
 
+    // Gọi filterPosts mỗi khi searchQuery hoặc posts thay đổi
+    React.useEffect(() => {
+        filterPosts();
+    }, [searchQuery, posts]);
+
     const loadMore = () => {
         if (page > 0 && !loading) {
             setPage(page + 1); // Khi tới cuối danh sách, load thêm bài viết
+        }
+    };
+
+    const onChangeSearch = (query) => {
+        setSearchQuery(query);
+    };
+
+    const filterPosts = () => {
+        if (searchQuery) {
+            const filtered = posts.filter(post => post.content.toLowerCase().includes(searchQuery.toLowerCase()));
+            setFilteredPosts(filtered);
+        } else {
+            setFilteredPosts(posts);
         }
     };
 
@@ -69,17 +89,25 @@ const Home = () => {
     }
 
     return (
-        <FlatList
-            data={posts}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listStyle}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => <PostItem post={item} />}
-            onEndReached={loadMore}
-            ListFooterComponent={loading && page > 1 ? <ActivityIndicator size="large" /> : null}
-            refreshing={refreshing}
-            onRefresh={refreshPosts}
-        />
+        <View>
+            <Searchbar
+                placeholder="Search"
+                onChangeText={onChangeSearch}
+                value={searchQuery}
+                style={styles.searchBar}
+            />
+            <FlatList
+                data={filteredPosts}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.listStyle}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => <PostItem post={item} />}
+                onEndReached={loadMore}
+                ListFooterComponent={loading && page > 1 ? <ActivityIndicator size="large" /> : null}
+                refreshing={refreshing}
+                onRefresh={refreshPosts}
+            />
+        </View>
     );
 };
 
@@ -88,5 +116,8 @@ export default Home;
 const styles = StyleSheet.create({
     listStyle: {
         paddingBottom: 20,
+    },
+    searchBar: {
+        margin: 10,
     },
 });
