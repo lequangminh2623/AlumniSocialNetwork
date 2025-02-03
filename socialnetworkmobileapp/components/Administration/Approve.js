@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { View, FlatList, ActivityIndicator, Alert, Image } from "react-native";
+import { View, FlatList, ActivityIndicator, Alert, Image, StyleSheet } from "react-native";
 import { Text, IconButton, List } from "react-native-paper";
 import { authApis, endpoints } from "../../configs/APIs";
 import { getValidImageUrl } from "../PostItem";
@@ -72,36 +72,36 @@ const Approve = () => {
     };
 
     const renderItem = ({ item }) => (
-        <List.Item
-            title={`${item.user.last_name} ${item.user.first_name}`}
-            description={`Email: ${item.user.email}\nMã sinh viên: ${item.student_code}`}
-            left={props => (
-                <Image
-                    {...props}
-                    source={{ uri: getValidImageUrl(item.user.avatar) }}
-                    style={{ width: 50, height: 50, borderRadius: 25 }}
-                />
-            )}
-            right={props => (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <IconButton
-                        icon="check"
-                        color="green"
-                        size={20}
-                        onPress={() => handleApprove(item.id)}
-                        disabled={actionLoading}
-                    />
-                    <IconButton
-                        icon="delete"
-                        color="red"
-                        size={20}
-                        onPress={() => handleDelete(item.id)}
-                        disabled={actionLoading}
-                    />
-                </View>
-            )}
-        />
-    );
+        <View style={styles1.listItem}>
+          <Image
+            source={{ uri: getValidImageUrl(item.user.avatar) }}
+            style={styles1.avatar}
+          />
+          <View style={styles1.textContainer}>
+            <Text style={styles1.title}>{`${item.user.last_name} ${item.user.first_name}`}</Text>
+            <Text style={styles1.description}>{`Email: ${item.user.email}\nMã sinh viên: ${item.student_code}`}</Text>
+          </View>
+          <View style={styles1.actionButtons}>
+            <IconButton
+              icon="check"
+              color="green"
+              size={20}
+              onPress={() => handleApprove(item.id)}
+              disabled={actionLoading}
+              style={styles.iconButton}
+            />
+            <IconButton
+              icon="delete"
+              color="red"
+              size={20}
+              onPress={() => handleDelete(item.id)}
+              disabled={actionLoading}
+              style={styles1.iconButton}
+            />
+          </View>
+        </View>
+      );
+      
 
     const loadMore = () => {
         if (hasMore && !loading) {
@@ -118,7 +118,7 @@ const Approve = () => {
     }
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, {backgroundColor:'f9f9f9'}]}>
             {actionLoading && (
                 <View style={styles.loadingOverlay}>
                     <ActivityIndicator size="large" color="#0000ff" />
@@ -135,5 +135,47 @@ const Approve = () => {
         </View>
     );
 };
+
+const styles1 = StyleSheet.create({
+    listItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        margin: 10,
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        elevation: 2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    avatar: {
+      width: 60,
+      height: 60,
+      borderRadius: 35,
+      marginRight: 16,
+    },
+    textContainer: {
+      flex: 1,
+    },
+    title: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: '#333',
+      marginBottom: 4,
+    },
+    description: {
+      fontSize: 14,
+      color: '#666',
+    },
+    actionButtons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    iconButton: {
+      marginHorizontal: 4,
+    },
+  });
 
 export default Approve;

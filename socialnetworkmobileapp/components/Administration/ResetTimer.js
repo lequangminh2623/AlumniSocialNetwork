@@ -58,28 +58,34 @@ const ResetTimer = () => {
     };
 
     const renderItem = ({ item }) => (
-        <List.Item
-            title={`${item.user.last_name} ${item.user.first_name}`}
-            description={`Email: ${item.user.email}`}
-            left={props => (
-                <Image
-                    {...props}
-                    source={{ uri: getValidImageUrl(item.user.avatar) }}
-                    style={{ width: 50, height: 50, borderRadius: 25 }}
+        <View style={styles.listItem}>
+            <Image
+                source={{ uri: getValidImageUrl(item.user.avatar) }}
+                style={styles.avatar}
+            />
+            <View style={styles.textContainer}>
+                <Text style={styles.title}>{`${item.user.last_name} ${item.user.first_name}`}</Text>
+                <Text style={styles.description}>{`Email: ${item.user.email}`}</Text>
+            </View>
+            <View style={styles.actionButtons}>
+                <IconButton
+                    icon="refresh"
+                    color="blue"
+                    size={20}
+                    onPress={() => handleReset(item.id)}
+                    disabled={actionLoading}
+                    style={styles.iconButton}
                 />
-            )}
-            right={props => (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <IconButton
-                        icon="refresh"
-                        color="blue"
-                        size={20}
-                        onPress={() => handleReset(item.id)}
-                        disabled={actionLoading}
-                    />
-                </View>
-            )}
-        />
+                <IconButton
+                    icon="delete"
+                    color="red"
+                    size={20}
+                    onPress={() => handleDelete(item.id)}
+                    disabled={actionLoading}
+                    style={styles.iconButton}
+                />
+            </View>
+        </View>
     );
 
     const loadMore = () => {
@@ -120,9 +126,49 @@ export default ResetTimer;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'center',
+        backgroundColor: '#f8f8f8', // Consistent background color
+        paddingHorizontal: 16, // Add horizontal padding to the container
+        paddingTop: 16,       // Add top padding to the container
+    },
+    listItem: {
+        padding: 16, // Consistent padding for list items
+        flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f8f8f8',
+        backgroundColor: '#fff',
+        borderRadius: 20, // Slightly less rounded corners
+        marginBottom: 16, // Space between list items
+        elevation: 2,       // Add a subtle shadow (Android)
+        shadowColor: '#000', // Add a subtle shadow (iOS)
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    avatar: {
+        width: 60,  // Slightly larger avatar
+        height: 60,
+        borderRadius: 30, // Make it circular
+        marginRight: 16,
+    },
+    textContainer: {
+        flex: 1, // Allow text to take available space
+    },
+    title: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#333',
+        marginBottom: 4,
+    },
+    description: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 2, // Space between description lines
+    },
+    actionButtons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    iconButton: {
+        marginHorizontal: 4,
     },
     loadingOverlay: {
         ...StyleSheet.absoluteFillObject,

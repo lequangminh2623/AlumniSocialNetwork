@@ -40,10 +40,16 @@ class PostImageSerializer(ModelSerializer):
 class PostSerializer(ModelSerializer):
     images = PostImageSerializer(many=True, required=False)
     user = UserSerializer(read_only=True)
+    object_type = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
-        fields = ['id', 'content', 'images', 'lock_comment', 'user', 'created_date', 'updated_date']
+        fields = ['id', 'content', 'images', 'lock_comment', 'user', 'created_date', 'updated_date', 'object_type']
+
+    def get_object_type(self, obj):
+        if SurveyPost.objects.filter(pk=obj.pk).exists():
+            return "survey"
+        return "post"
 
 
 class CommentSerializer(ModelSerializer):

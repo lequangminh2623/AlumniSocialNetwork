@@ -482,7 +482,14 @@ class SurveyPostViewSet(viewsets.ViewSet):
                 'multi_choice': question.multi_choice,
                 'options': list(options)
             })
-        return Response(data, status=status.HTTP_200_OK)
+
+        response_data = {
+            'survey_type': survey_post.survey_type,
+            'end_time': survey_post.end_time,
+            'questions': data
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
     @action(detail=True, url_path='draft', methods=['post'], permission_classes=[AlumniPermission])
     def draft(self, request, pk=None):
