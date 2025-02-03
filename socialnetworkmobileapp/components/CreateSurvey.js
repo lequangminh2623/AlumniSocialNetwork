@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, Text, ScrollView, Switch, StyleSheet } from 'react-native';
+import { View, TextInput, Text, ScrollView, Switch, StyleSheet } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
+import { IconButton, Button } from 'react-native-paper';
 
 const surveyTypes = [
     { label: 'Training Program', value: 1 },
@@ -11,7 +12,7 @@ const surveyTypes = [
 ];
 
 const CreateSurvey = ({ navigation, route }) => {
-    const [surveyType, setSurveyType] = useState(route.params?.surveyType || '');
+    const [surveyType, setSurveyType] = useState(route.params?.surveyType || 1);
     const [endTime, setEndTime] = useState(route.params?.endTime || new Date());
     const [questions, setQuestions] = useState(route.params?.questions || [{ question: '', options: [{ option: '' }], multi_choice: false }]);
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -76,67 +77,160 @@ const CreateSurvey = ({ navigation, route }) => {
         navigation.navigate('CreatePostScreen', { surveyType, endTime: endTime.toISOString(), questions });
     };
 
+    const handleDeleteQuestion = (qIndex) => {
+        const updatedQuestions = [...questions];
+        updatedQuestions.splice(qIndex, 1);
+        setQuestions(updatedQuestions);
+      };
+    
+      const handleDeleteOption = (qIndex, oIndex) => {
+        const updatedQuestions = [...questions];
+        const updatedOptions = [...updatedQuestions[qIndex].options];
+        updatedOptions.splice(oIndex, 1);
+        updatedQuestions[qIndex].options = updatedOptions;
+        setQuestions(updatedQuestions);
+      };
+    
+
     return (
-        <ScrollView contentContainerStyle={{ padding: 16 }}>
-            <Picker
-                selectedValue={surveyType}
-                onValueChange={(itemValue) => setSurveyType(itemValue)}
-                style={{ marginBottom: 16 }}
-            >
-                {surveyTypes.map((type) => (
-                    <Picker.Item key={type.value} label={type.label} value={type.value} />
-                ))}
-            </Picker>
-            <Button title="Select End Time" onPress={() => setShowDatePicker(true)} />
-            {showDatePicker && (
-                <DateTimePicker
-                    value={endTime}
-                    mode="date"
-                    display="default"
-                    onChange={handleDateChange}
-                />
-            )}
-            <Text style={{ marginBottom: 16 }}>End Time: {endTime.toDateString()}</Text>
-            {questions.map((question, qIndex) => (
-                <View key={qIndex} style={{ marginBottom: 16 }}>
-                    <TextInput
-                        placeholder={`Question ${qIndex + 1}`}
-                        value={question.question}
-                        onChangeText={(text) => handleQuestionChange(text, qIndex)}
-                        style={{ borderBottomWidth: 1, marginBottom: 8 }}
+        <ScrollView contentContainerStyle={{ padding: 16}}>
+            <View style={styles.questionContainer}>
+                <Picker
+                    selectedValue={surveyType}
+                    onValueChange={(itemValue) => setSurveyType(itemValue)}
+                    style={{ marginBottom: 16,}}
+                >
+                    {surveyTypes.map((type) => (
+                        <Picker.Item key={type.value} label={type.label} value={type.value} />
+                    ))}
+                </Picker>
+                <View style={styles.datePickerContainer}>
+                    <Text style={{ marginLeft: 15 }}>Thời hạn: {endTime.toDateString()}</Text>
+                    <IconButton
+                        icon="calendar"
+                        size={24}
+                        onPress={() => setShowDatePicker(true)}
                     />
-                    {question.options.map((option, oIndex) => (
+                    {showDatePicker && (
+                        <DateTimePicker
+                            value={endTime}
+                            mode="date"
+                            display="default"
+                            onChange={handleDateChange}
+                        />
+                    )}
+                </View>
+            </View>
+            {questions.map((question, qIndex) => (
+                <View key={qIndex} style={styles.questionContainer}>
+                <View style={styles.questionHeader}>
+                    <TextInput
+                    placeholder={`Question ${qIndex + 1}`}
+                    value={question.question}
+                    onChangeText={(text) => handleQuestionChange(text, qIndex)}
+                    style={{ flex: 1, borderWidth: 1, borderRadius: 10, padding: 10 }}
+                    />
+                    {qIndex != 0 ? (<IconButton
+                        icon="close"
+                        iconColor='red'
+                        mode='contained'
+                        size={30}
+                        onPress={() => handleDeleteQuestion(qIndex)}
+                        style={styles.deleteButton}
+                    />) : null}
+                </View>
+                {question.options.map((option, oIndex) => (
+                    <View key={oIndex} style={styles.optionContainer}>
                         <TextInput
-                            key={oIndex}
                             placeholder={`Option ${oIndex + 1}`}
                             value={option.option}
                             onChangeText={(text) => handleOptionChange(text, qIndex, oIndex)}
-                            style={{ borderBottomWidth: 1, marginBottom: 8 }}
+                            style={styles.optionInput}
                         />
-                    ))}
-                    <Button title="Add Option" onPress={() => handleAddOption(qIndex)} />
-                    <View style={styles.switchContainer}>
-                        <Text>Multi Choice</Text>
-                        <Switch
-                            value={question.multi_choice}
-                            onValueChange={(value) => handleMultiChoiceChange(value, qIndex)}
-                        />
+                        {oIndex != 0 ? (<IconButton
+                            icon="minus"
+                            mode='outlined'
+                            size={20}
+                            onPress={() => handleDeleteOption(qIndex, oIndex)}
+                            style={styles.deleteButton}
+                        />) : null}
                     </View>
+                ))}
+                <IconButton
+                        icon="plus"
+                        mode='outlined'
+                        size={20}
+                        onPress={() => handleAddOption(qIndex)}
+                        style={styles.addButton}
+                    />
+                <View style={styles.switchContainer}>
+                    <Text>Multi Choice</Text>
+                    <Switch
+                    value={question.multi_choice}
+                    onValueChange={(value) => handleMultiChoiceChange(value, qIndex)}
+                    />
+                </View>
                 </View>
             ))}
-            <Button title="Add Question" onPress={handleAddQuestion} />
-            <Button title="Submit Survey" onPress={handleSubmitSurvey} />
+            <IconButton
+                icon="plus"
+                iconColor='blue'
+                mode='contained'
+                size={30}
+                onPress={handleAddQuestion}
+                style={styles.addButton}
+            />
+            <Button title="Hoàn tất" onPress={handleSubmitSurvey} />
         </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
+    container: {
+      padding: 16,
+    },
+    questionContainer: {
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: '#ccc',
+      borderRadius: 8,
+      backgroundColor: '#ffffff',
+      padding: 16,
+    },
+    questionHeader: { 
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    optionContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    optionInput: {
+      borderBottomWidth: 1,
+      marginRight: 8,
+      width: '80%',
+    },
+    deleteButton: {
+        marginLeft: 10,
+    },
+    addButton: {
+        alignSelf: 'center',
+        marginVertical: 8,
+    },
     switchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 8,
+    },
+    datePickerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginTop: 8,
+        marginBottom: 16,
     },
-});
+  });
 
 export default CreateSurvey;

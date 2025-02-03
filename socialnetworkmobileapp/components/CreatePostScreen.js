@@ -1,11 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
-import { ScrollView, Alert, View, TextInput, Button, StyleSheet, Image } from 'react-native';
+import { useEffect, useState, useContext } from 'react';
+import { MyUserContext } from "../configs/UserContexts";
+import { ScrollView, Alert, View, TextInput, StyleSheet, Image, Text } from 'react-native';
+import { Button } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { endpoints } from '../configs/APIs';
 import axios from '../configs/APIs';
 
 const CreatePostScreen = ({ navigation, route }) => {
+    const user = useContext(MyUserContext);
     const [content, setContent] = useState('');
     const [images, setImages] = useState([]);
     const [surveyType, setSurveyType] = useState('');
@@ -119,6 +122,12 @@ const CreatePostScreen = ({ navigation, route }) => {
     return (
         <View style={styles.container}>
             <ScrollView style={styles.scrollView}>
+                <View style={styles.post}>
+                    <Image source={{ uri: user.avatar.replace(/^image\/upload\//, "") }} style={styles.avatar} />
+                    <View>
+                        <Text style={styles.username}>{user.username}</Text>
+                    </View>
+                </View>
                 <TextInput
                     style={styles.input}
                     multiline
@@ -137,11 +146,9 @@ const CreatePostScreen = ({ navigation, route }) => {
                 </ScrollView>
             </ScrollView>
             <View style={styles.buttonContainer}>
-                <Button title="Chọn ảnh" onPress={pickImages} />
-                <View style={styles.spacing} />
-                <Button title="Tạo khảo sát" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions })} />
-                <View style={styles.spacing} />
-                <Button title="Đăng bài" onPress={submitPost} />
+                <Button style={{ borderRadius: 0 }} mode="outlined" onPress={pickImages}>Chọn ảnh</Button>
+                <Button style={{ borderRadius: 0 }} mode="outlined" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions })}>Tạo khảo sát</Button>
+                <Button style={{ borderRadius: 0 }} mode="outlined" onPress={submitPost}>Đăng bài</Button>
             </View>
         </View>
     );
@@ -152,13 +159,25 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
+    post: { 
+        flexDirection: "row", 
+        alignItems: "center", 
+        marginBottom: 30,
+    },
+    avatar: { 
+        width: 50, 
+        height: 50, 
+        borderRadius: 25, 
+        marginRight: 10
+    },
+    username: { 
+        fontSize: 18, 
+        fontWeight: "bold" 
+    },
     scrollView: {
         padding: 20,
     },
     input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
         padding: 10,
         minHeight: 150,
         textAlignVertical: 'top',
@@ -169,20 +188,16 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
     },
     image: {
-        width: 100,
-        height: 100,
+        width: 170,
+        height: 170,
         margin: 5,
         borderRadius: 8,
     },
     buttonContainer: {
         flexDirection: 'column',
         justifyContent: 'space-around',
-        padding: 10,
         borderTopWidth: 1,
-        borderColor: '#ddd',
-    },
-    spacing: {
-        height: 20,
+        borderColor: 'black',
     },
 });
 

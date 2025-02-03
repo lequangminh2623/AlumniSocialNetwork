@@ -18,6 +18,7 @@ export const endpoints = {
     'reset-teacher': teacherId => `/teacher/${teacherId}/reset/`,
     'react': (postId) => `/post/${postId}/react/`,
     'survey': '/survey/',
+    'survey-detail': surveyId => `/survey/${surveyId}/`,
 }
 
 export const getPostComments = async (postId) => {
@@ -33,6 +34,16 @@ export const getPostComments = async (postId) => {
 export const getPostReacts = async (postId) => {
     try {
         const res = await axios.get(BASE_URL + endpoints.reacts(postId));
+        return res.data;
+    } catch (error) {
+        console.error("Error fetching reacts:", error);
+        return [];
+    }
+};
+
+export const getSurveyData = async (surveyId) => {
+    try {
+        const res = await axios.get(BASE_URL + endpoints["survey-detail"](surveyId));
         return res.data;
     } catch (error) {
         console.error("Error fetching reacts:", error);
