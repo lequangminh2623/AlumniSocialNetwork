@@ -75,14 +75,6 @@ const ResetTimer = () => {
                     disabled={actionLoading}
                     style={styles.iconButton}
                 />
-                <IconButton
-                    icon="delete"
-                    color="red"
-                    size={20}
-                    onPress={() => handleDelete(item.id)}
-                    disabled={actionLoading}
-                    style={styles.iconButton}
-                />
             </View>
         </View>
     );
