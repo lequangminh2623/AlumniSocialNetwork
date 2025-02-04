@@ -30,7 +30,8 @@ const Home = () => {
         setLoading(true);
         try {
             let url = `${endpoints['post']}?page=${page}`;
-            if (searchQuery) url += `&q=${searchQuery}`;
+            if (searchQuery) 
+                url += `&q=${searchQuery}`;
 
             let res = await APIs.get(url);
             setPosts(prev => (page > 1 ? [...prev, ...res.data.results] : res.data.results));
@@ -74,7 +75,7 @@ const Home = () => {
 
     // Gọi API khi thay đổi page hoặc searchQuery
     useEffect(() => {
-        let timer = setTimeout(loadPosts, 500);
+        let timer = setTimeout(loadPosts, 400);
         return () => clearTimeout(timer);
     }, [page, searchQuery]);
 
