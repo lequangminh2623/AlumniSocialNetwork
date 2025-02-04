@@ -28,23 +28,30 @@ export const PostItem = ({ post }) => {
 
     const [commentCount, setCommentCount] = useState(0);
     const [reactCount, setReactCount] = useState(0);
+    const [likeCount, setLikeCount] = useState(0);
+    const [hahaCount, setHahaCount] = useState(0);
+    const [loveCount, setLoveCount] = useState(0);
 
     const [selectedReaction, setSelectedReaction] = useState(null);
     const [showReactions, setShowReactions] = useState(false);
 
+    const fetchPostData = async () => {
+        const comments = await getPostComments(post.id);
+        setCommentCount(comments.length);
+
+        const reacts = await getPostReacts(post.id);
+        setReactCount(reacts.length);
+
+        const userReact = reacts.find((react) => react.user.id === user.id);
+        setSelectedReaction(userReact ? userReact.reaction : null);
+
+        setLikeCount(reacts.filter(react => react.reaction === 1).length);
+        setHahaCount(reacts.filter(react => react.reaction === 2).length);
+        setLoveCount(reacts.filter(react => react.reaction === 3).length);
+    };
+
     useEffect(() => {
-        const fetchComments = async () => {
-            const comments = await getPostComments(post.id);
-            setCommentCount(comments.length);
-
-            const reacts = await getPostReacts(post.id);
-            setReactCount(reacts.length);
-
-            const userReact = reacts.find((react) => react.user.id === user.id);
-            setSelectedReaction(userReact ? userReact.reaction : null);
-        };
-
-        fetchComments();
+        fetchPostData();
     }, [post.id]);
 
     const reactions = [
@@ -60,11 +67,7 @@ export const PostItem = ({ post }) => {
             console.info(reactionId);
             await api.post(endpoints.react(post.id), { reaction: reactionId });
 
-            const reacts = await getPostReacts(post.id);
-            setReactCount(reacts.length);
-
-            const userReact = reacts.find((react) => react.user.id === user.id);
-            setSelectedReaction(userReact ? userReact.reaction : null); 
+            await fetchPostData();
             setShowReactions(false);
         } catch (error) {
             console.error("Error reacting to post:", error);
@@ -78,9 +81,7 @@ export const PostItem = ({ post }) => {
             
             await api.post(endpoints.react(post.id));
             
-            setSelectedReaction(null);
-            const reacts = await getPostReacts(post.id);
-            setReactCount(reacts.length);
+            await fetchPostData();
             setShowReactions(false);
         } catch (error) {
             console.error("Error removing reaction:", error);
@@ -116,7 +117,20 @@ export const PostItem = ({ post }) => {
                     ))}
                 </View>
             )}
-
+            <View style={styles.reactionCounts}>
+                <View style={styles.reactionCountItem}>
+                    <FontAwesome name="thumbs-up" size={18} color="#1877F2" />
+                    <Text style={styles.reactionCountText}>{likeCount}</Text>
+                </View>
+                <View style={styles.reactionCountItem}>
+                    <FontAwesome name="smile-o" size={18} color="#FFD700" />
+                    <Text style={styles.reactionCountText}>{hahaCount}</Text>
+                </View>
+                <View style={styles.reactionCountItem}>
+                    <FontAwesome name="heart" size={18} color="#FF3040" />
+                    <Text style={styles.reactionCountText}>{loveCount}</Text>
+                </View>
+            </View>
             <View style={styles.interactions}>
                 <TouchableOpacity onPress={() => setShowReactions(!showReactions)}>
                     <FontAwesome
@@ -149,6 +163,8 @@ export const PostItem = ({ post }) => {
                 <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: handleCommentAdded })} />
                 <Text style={styles.interactionText}>{commentCount}</Text>
             </View>
+
+            
         </View>
     );
 };
@@ -236,5 +252,20 @@ const styles = StyleSheet.create({
     },
     reactionButton: {
         marginHorizontal: 5,
+    },
+    reactionCounts: {
+        flexDirection: "row",
+        justifyContent: "flex-start",
+        marginTop: 10,
+    },
+    reactionCountItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginRight: 10,
+    },
+    reactionCountText: {
+        fontSize: 14,
+        color: "#555",
+        marginLeft: 5,
     },
 });
