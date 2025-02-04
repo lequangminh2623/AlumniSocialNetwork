@@ -1,13 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
-import { View, Text, Image, FlatList, StyleSheet, TouchableOpacity, TextInput, Button, KeyboardAvoidingView, Platform } from "react-native";
-import { getPostComments, authApis } from "../configs/APIs";
+import React, { useContext, useEffect, useRef, useState } from "react";
+import { View, Text, Image, FlatList, StyleSheet, TouchableOpacity, TextInput, Button, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { getPostComments, authApis, endpoints } from "../configs/APIs";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import moment from "moment";
 import 'moment/locale/vi';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { IconButton } from "react-native-paper";
-
+import { MyUserContext } from "../configs/UserContexts";
+import { useNavigation } from "@react-navigation/native";
 
 moment.locale("vi");
 
@@ -32,7 +33,7 @@ const selectImage = async (setImage) => {
 
 const MAX_REPLY_DEPTH = 3;
 
-const PostDetailScreen = ({ navigation, route }) => {
+const PostDetailScreen = ({ route }) => {
     const { post, onCommentAdded } = route.params;
     const [comments, setComments] = useState([]);
     const commentContentRef = useRef("");
@@ -41,6 +42,9 @@ const PostDetailScreen = ({ navigation, route }) => {
     const [replyingTo, setReplyingTo] = useState(null);
     const [commentImage, setCommentImage] = useState(null);
     const [replyImage, setReplyImage] = useState(null);
+    const user = useContext(MyUserContext);
+    const [token, setToken] = useState(null);
+    const navigation = useNavigation()
     const cleanAvatarUrlAvatar = post.user.avatar.replace(/^image\/upload\//, "");
 
     const buildCommentTree = (comments) => {
@@ -127,6 +131,15 @@ const PostDetailScreen = ({ navigation, route }) => {
     };
 
     useEffect(() => {
+        const fetchToken = async () => {
+            const storedToken = await AsyncStorage.getItem("token");
+            setToken(storedToken);
+        };
+
+        fetchToken();
+    }, []);
+
+    useEffect(() => {
         const fetchComments = async () => {
             const data = await getPostComments(post.id);
             setComments(buildCommentTree(data));
@@ -134,6 +147,7 @@ const PostDetailScreen = ({ navigation, route }) => {
 
         fetchComments();
     }, [post.id]);
+    
 
     const changeReplyingTo = (commentId) => {
         replyContentRef.current = ""
@@ -145,7 +159,6 @@ const PostDetailScreen = ({ navigation, route }) => {
             const content = commentContentRef.current.trim();
             commentContentRef.current = "";
             if (!content) return;
-            const token = await AsyncStorage.getItem("token");
             const api = authApis(token);
 
             const formData = new FormData();
@@ -169,7 +182,7 @@ const PostDetailScreen = ({ navigation, route }) => {
             const data = await getPostComments(post.id);
             setComments(buildCommentTree(data));
             if (onCommentAdded) {
-                onCommentAdded();
+                onCommentAdded(data.length);
             }
         } catch (error) {
             console.error("Error commenting on post:", error);
@@ -181,7 +194,6 @@ const PostDetailScreen = ({ navigation, route }) => {
             const content = replyContentRef.current.trim();
             replyContentRef.current = "";
             if (!content) return;
-            const token = await AsyncStorage.getItem("token");
             const api = authApis(token);
 
             const formData = new FormData();
@@ -206,7 +218,7 @@ const PostDetailScreen = ({ navigation, route }) => {
             setComments(buildCommentTree(data));
 
             if (onCommentAdded) {
-                onCommentAdded();
+                onCommentAdded(data.length);
             }
 
             const updatedComments = await getPostComments(post.id);
@@ -215,6 +227,8 @@ const PostDetailScreen = ({ navigation, route }) => {
             console.error("Error replying to comment:", error);
         }
     };
+    
+
 
     return (
         <KeyboardAvoidingView
@@ -236,10 +250,9 @@ const PostDetailScreen = ({ navigation, route }) => {
                             </View>
                             {post.object_type === "survey" && (
                                 <TouchableOpacity onPress={() => navigation.navigate('SurveyScreen', { post: post })} style={{ flex: 1, alignItems: "flex-end" }}>
-                                    <Text style={styles.surveyButton}>Tiến hành khảo sát</Text>
+                                    <Text style={{color: '#007BFF'}}>Tiến hành khảo sát</Text>
                                 </TouchableOpacity>
                             )}
-                            {}
                         </View>
                         <Text style={styles.content}>{post.content}</Text>
                         {post.images && post.images.length > 0 && (
@@ -401,9 +414,6 @@ export const styles = StyleSheet.create({
         marginRight: 10,
         minHeight: 40,
         flex: 1,
-    },
-    surveyButton: {
-        color: '#007BFF',
     },
     commentImage: {
         width: 100,
