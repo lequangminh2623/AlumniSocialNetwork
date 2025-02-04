@@ -22,6 +22,8 @@ export const endpoints = {
     'draft': surveyId => `/survey/${surveyId}/draft/`,
     'submit': surveyId => `/survey/${surveyId}/submit/`,
     'resume': surveyId => `/survey/${surveyId}/resume/`,
+    'group': '/group/',
+    'invitation': '/invitation/',
 }
 
 export const getPostComments = async (postId) => {
@@ -50,6 +52,16 @@ export const getSurveyData = async (surveyId) => {
         return res.data;
     } catch (error) {
         console.error("Error fetching reacts:", error);
+        return [];
+    }
+};
+
+export const getGroups = async () => {
+    try {
+        const res = await axios.get(BASE_URL + endpoints.group);
+        return res.data;
+    } catch (error) {
+        console.error("Error fetching groups:", error);
         return [];
     }
 };

@@ -115,7 +115,8 @@ export default Home;
 
 const styles = StyleSheet.create({
     listStyle: {
-        paddingBottom: 20,
+        paddingBottom: 100,
+        
     },
     searchBar: {
         margin: 10,

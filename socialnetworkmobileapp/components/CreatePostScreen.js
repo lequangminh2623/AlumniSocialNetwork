@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { endpoints } from '../configs/APIs';
 import axios from '../configs/APIs';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 const CreatePostScreen = ({ route }) => {
     const user = useContext(MyUserContext);
@@ -34,6 +35,11 @@ const CreatePostScreen = ({ route }) => {
         if (!result.canceled) {
             setImages(result.assets);
         }
+    };
+
+    // Function to delete an image
+    const deleteImage = (index) => {
+        setImages(images.filter((_, i) => i !== index));
     };
 
     // Lấy token từ AsyncStorage
@@ -139,21 +145,31 @@ const CreatePostScreen = ({ route }) => {
                 />
                 <ScrollView horizontal style={styles.imageScrollView}>
                     {images.map((image, index) => (
-                        <Image
-                            key={index}
-                            source={{ uri: image.uri }}
-                            style={styles.image}
-                        />
+                        <View key={index} style={styles.imageContainer}>
+                            <Image
+                                source={{ uri: image.uri }}
+                                style={styles.image}
+                            />
+                            <Ionicons
+                                name="close-circle"
+                                size={30}
+                                color="black"
+                                style={styles.deleteIcon}
+                                onPress={() => deleteImage(index)}
+                            />
+                        </View>
                     ))}
                 </ScrollView>
             </ScrollView>
             <View style={styles.buttonContainer}>
-                <Button style={{ borderRadius: 0 }} mode="outlined" onPress={pickImages}>Chọn ảnh</Button>
-                {user.role === 0 && <Button style={{ borderRadius: 0 }} mode="outlined" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions })}>Tạo khảo sát</Button>}
-            </View>
-            <View style={styles.buttonContainerSubmit}>
+                <Button style={styles.pickImagesButton} mode="outlined" onPress={pickImages}>Chọn ảnh</Button>
+                {user.role === 0 && (
+                    <>
+                        <Button style={styles.createSurveyButton} mode="outlined" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions })}>Tạo khảo sát</Button>
+                        <Button style={styles.createInvitationButton} mode="outlined">Tạo thư mời</Button>
+                    </>
+                )}
                 <Button style={styles.submitButton} mode="contained" onPress={submitPost}>Đăng bài</Button>
-
             </View>
         </View>
     );
@@ -184,7 +200,7 @@ const styles = StyleSheet.create({
     },
     input: {
         padding: 10,
-        minHeight: 150,
+        minHeight: 50,
         textAlignVertical: 'top',
         marginBottom: 10,
     },
@@ -205,19 +221,44 @@ const styles = StyleSheet.create({
         borderColor: 'black',
     },
     submitButton: {
-        borderRadius: 0,
+        borderRadius: 20,
         backgroundColor: '#007BFF',
+        padding: 10,
+        margin: 20,
     },
-    buttonContainerSubmit: {
-        flexDirection: 'column',
-        justifyContent: 'space-around',
-        borderTopWidth: 1,
-        borderColor: 'black',
+    pickImagesButton: {
+        borderRadius: 10,
+        borderColor: '#28A745',
+        borderWidth: 2,
+        marginStart: 100,
+        marginEnd: 100,
+        marginBottom: 20,
+        marginTop: 20,
+    },
+    createSurveyButton: {
+        borderRadius: 10,
+        borderColor: '#FFC107',
+        borderWidth: 2,
+        marginStart: 100,
+        marginEnd: 100,
+        marginBottom: 20,
+    },
+    createInvitationButton: {
+        borderRadius: 10,
+        borderColor: '#17A2B8',
+        borderWidth: 2,
+        marginStart: 100,
+        marginEnd: 100,
+    },
+    imageContainer: {
+        position: 'relative',
+        marginBottom: 20,
+    },
+    deleteIcon: {
         position: 'absolute',
-        top: 0,
-        right: 0,
-        margin: 10,
-    }
+        top: 5,
+        right: 5,
+    },
 });
 
 export default CreatePostScreen;
