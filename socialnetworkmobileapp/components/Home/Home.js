@@ -1,5 +1,5 @@
-import React from "react";
-import { Alert, FlatList, StyleSheet, View } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { Alert, FlatList, StyleSheet, View, Text } from "react-native";
 import APIs, { authApis, endpoints } from "../../configs/APIs";
 import { ActivityIndicator, Searchbar } from "react-native-paper";
 import { PostItem } from "../PostItem";
@@ -11,7 +11,7 @@ const Home = () => {
     const [page, setPage] = React.useState(1);
     const [refreshing, setRefreshing] = React.useState(false);
     const [searchQuery, setSearchQuery] = React.useState("");
-    const [filteredPosts, setFilteredPosts] = React.useState([]);
+    const [hasMore, setHasMore] = useState(true);
     const [token, setToken] = React.useState(null);
 
     React.useEffect(() => {
@@ -24,32 +24,25 @@ const Home = () => {
     }, []);
 
     // Hàm load posts
-    const loadPosts = async () => {
-        if (page > 0) {
-            setLoading(true);
-            try {
-                let url = `${endpoints['post']}?page=${page}`;
-                let res = await APIs.get(url);
-                console.info(res.data);
+    const loadPosts = useCallback(async () => {
+        if (!hasMore) return; // Ngăn tải thêm khi không còn dữ liệu
 
-                if (page > 1) {
-                    setPosts((posts) => [...posts, ...res.data.results]);
-                } else {
-                    setPosts(res.data.results);
-                }
+        setLoading(true);
+        try {
+            let url = `${endpoints['post']}?page=${page}`;
+            if (searchQuery) url += `&q=${searchQuery}`;
 
-                if (res.data.next === null) {
-                    setPage(0); // Không còn dữ liệu nữa
-                }
-            } catch (ex) {
-                console.error(ex);
-            } finally {
-                setLoading(false);
-            }
+            let res = await APIs.get(url);
+            setPosts(prev => (page > 1 ? [...prev, ...res.data.results] : res.data.results));
+
+            if (res.data.next === null) 
+                setHasMore(false); // Đánh dấu không còn dữ liệu
+        } catch (ex) {
+            console.error(ex);
+        } finally {
+            setLoading(false);
         }
-        else 
-            return
-    };
+    }, [page, searchQuery, hasMore]);
 
     const handlePostDeletion = (postId) => {
         Alert.alert(
@@ -78,73 +71,64 @@ const Home = () => {
         );
     };
 
-    // Hàm để tải lại bài viết
-    const refreshPosts = async () => {
+
+    // Gọi API khi thay đổi page hoặc searchQuery
+    useEffect(() => {
+        let timer = setTimeout(loadPosts, 500);
+        return () => clearTimeout(timer);
+    }, [page, searchQuery]);
+
+    // Hàm tải lại danh sách bài viết
+    const refreshPosts = useCallback(async () => {
         setRefreshing(true);
-        setPage(1); // Reset lại trang về 1
+        setPage(1);
+        setHasMore(true);
         try {
-            let res = await APIs.get(`${endpoints['post']}?page=1`);
+            let res = await APIs.get(`${endpoints['post']}?page=1&q=${searchQuery}`);
             setPosts(res.data.results);
-            setPage(2);
         } catch (ex) {
             console.error(ex);
         } finally {
             setRefreshing(false);
         }
-    };
+    }, [searchQuery]);
 
-    // Gọi loadPosts mỗi khi page thay đổi
-    React.useEffect(() => {
-        loadPosts();
-    }, [page]);
-
-    // Gọi filterPosts mỗi khi searchQuery hoặc posts thay đổi
-    React.useEffect(() => {
-        filterPosts();
-    }, [searchQuery, posts]);
-
-    const loadMore = () => {
-        if (page > 0 && !loading) {
-            setPage(page + 1); // Khi tới cuối danh sách, load thêm bài viết
-        }
-    };
-
-    const onChangeSearch = (query) => {
+    // Hàm thay đổi tìm kiếm
+    const onChangeSearch = useCallback((query) => {
         setSearchQuery(query);
-    };
+        setPage(1);
+        setHasMore(true);
+    }, []);
 
-    const filterPosts = () => {
-        if (searchQuery) {
-            const filtered = posts.filter(post => post.content.toLowerCase().includes(searchQuery.toLowerCase()));
-            setFilteredPosts(filtered);
-        } else {
-            setFilteredPosts(posts);
-        }
+    // Load thêm dữ liệu khi cuộn đến cuối
+    const loadMore = () => {
+        if (hasMore && !loading) 
+            setPage(prev => prev + 1);
     };
-
-    if (loading && page === 1) {
-        return <ActivityIndicator size="large" />;
-    }
 
     return (
         <View>
             <Searchbar
-                placeholder="Search"
+                placeholder="Tìm kiếm bài viết..."
                 onChangeText={onChangeSearch}
                 value={searchQuery}
                 style={styles.searchBar}
             />
-            <FlatList
-                data={filteredPosts}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.listStyle}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => <PostItem post={item} onPostDeleted={handlePostDeletion} />}
-                onEndReached={loadMore}
-                ListFooterComponent={loading && page > 1 ? <ActivityIndicator size="large" /> : null}
-                refreshing={refreshing}
-                onRefresh={refreshPosts}
-            />
+            {posts.length === 0 && !loading ? (
+                <Text style={styles.noPostsText}>Không có kết quả tìm kiếm nào</Text>
+            ) : (
+                <FlatList
+                    data={posts}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.listStyle}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={({ item }) => <PostItem post={item} onPostDeleted={handlePostDeletion} />}
+                    onEndReached={loadMore}
+                    ListFooterComponent={loading && page > 1 ? <ActivityIndicator size="large" /> : null}
+                    refreshing={refreshing}
+                    onRefresh={refreshPosts}
+                />
+            )}
         </View>
     );
 };
@@ -158,5 +142,11 @@ const styles = StyleSheet.create({
     },
     searchBar: {
         margin: 10,
+    },
+    noPostsText: {
+        textAlign: "center",
+        marginTop: 20,
+        fontSize: 16,
+        color: "gray",
     },
 });
