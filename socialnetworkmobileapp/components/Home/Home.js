@@ -1,16 +1,27 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { FlatList, StyleSheet, View, Text } from "react-native";
-import APIs, { endpoints } from "../../configs/APIs";
+import { Alert, FlatList, StyleSheet, View, Text } from "react-native";
+import APIs, { authApis, endpoints } from "../../configs/APIs";
 import { ActivityIndicator, Searchbar } from "react-native-paper";
 import { PostItem } from "../PostItem";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Home = () => {
-    const [posts, setPosts] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(1);
-    const [refreshing, setRefreshing] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [posts, setPosts] = React.useState([]);
+    const [loading, setLoading] = React.useState(false);
+    const [page, setPage] = React.useState(1);
+    const [refreshing, setRefreshing] = React.useState(false);
+    const [searchQuery, setSearchQuery] = React.useState("");
     const [hasMore, setHasMore] = useState(true);
+    const [token, setToken] = React.useState(null);
+
+    React.useEffect(() => {
+        const fetchToken = async () => {
+            const storedToken = await AsyncStorage.getItem("token");
+            setToken(storedToken);
+        };
+
+        fetchToken();
+    }, []);
 
     // Hàm load posts
     const loadPosts = useCallback(async () => {
@@ -32,6 +43,34 @@ const Home = () => {
             setLoading(false);
         }
     }, [page, searchQuery, hasMore]);
+
+    const handlePostDeletion = (postId) => {
+        Alert.alert(
+            "Xác nhận xóa", 
+            "Bạn có chắc chắn muốn xóa bài viết này?", 
+            [
+                {
+                    text: "Hủy",
+                    style: "cancel"
+                },
+                {
+                    text: "Xóa",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const response = await authApis(token).delete(endpoints['post-detail'](postId));
+                            Alert.alert("Bài viết", "Xóa bài viết thành công!.");
+                            setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+                        } catch (error) {
+                            console.error(error);
+                            Alert.alert("Bài viết", "Không thể xóa bài viết. Vui lòng thử lại.");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
 
     // Gọi API khi thay đổi page hoặc searchQuery
     useEffect(() => {
@@ -83,7 +122,7 @@ const Home = () => {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.listStyle}
                     keyExtractor={(item) => item.id.toString()}
-                    renderItem={({ item }) => <PostItem post={item} />}
+                    renderItem={({ item }) => <PostItem post={item} onPostDeleted={handlePostDeletion} />}
                     onEndReached={loadMore}
                     ListFooterComponent={loading && page > 1 ? <ActivityIndicator size="large" /> : null}
                     refreshing={refreshing}

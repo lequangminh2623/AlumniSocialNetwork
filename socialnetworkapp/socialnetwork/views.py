@@ -134,7 +134,7 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         self.permission_classes = [OwnerPermission | AdminPermission]
         self.check_object_permissions(request, post)
         post.soft_delete()
-        return Response({'message': 'Bài viết đã được xóa thành công.'}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(methods=['patch'], url_path='restore', detail=True, permission_classes=[OwnerPermission])
     def restore_post(self, request, pk=None):

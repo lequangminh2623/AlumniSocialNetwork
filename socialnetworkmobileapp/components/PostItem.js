@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { Image, StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { Image, StyleSheet, Text, View, TouchableOpacity, Alert } from "react-native";
 import { hp } from "../styles/common";
 import { FontAwesome } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -10,6 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import moment from "moment";
 import 'moment/locale/vi';
 import { Ionicons } from '@expo/vector-icons';
+import { IconButton } from "react-native-paper";
 
 
 
@@ -21,7 +22,7 @@ export const getValidImageUrl = (url) => {
     return url;
 };
 
-export const PostItem = ({ post }) => {
+export const PostItem = ({ post, onPostDeleted }) => {
     const cleanAvatarUrlAvatar = post.user.avatar.replace(/^image\/upload\//, "");
     const navigation = useNavigation();
     const user = useContext(MyUserContext);
@@ -88,10 +89,10 @@ export const PostItem = ({ post }) => {
         }
     };
 
-    const handleCommentAdded = async () => {
-        const comments = await getPostComments(post.id);
-        setCommentCount(comments.length);
+    const updateCommentCount = (commentCount) => {
+        setCommentCount(commentCount);
     };
+
 
     return (
         <View style={styles.container}>
@@ -101,7 +102,25 @@ export const PostItem = ({ post }) => {
                     <Text style={styles.username}>{post.user.first_name} {post.user.last_name}</Text>
                     <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>
                 </View>
-                <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: handleCommentAdded })} />
+                {(user.role === 0 || user.id === post.user.id) && (
+                    <>
+                            <IconButton
+                            icon="delete"
+                            color="red"
+                            size={20}
+                            onPress={() => onPostDeleted(post.id)}
+                        />
+                    </>
+                )}
+                <View style={{flexDirection: 'column', marginLeft: 'auto'}}>
+                
+                <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: updateCommentCount })} />
+                {post.object_type === "survey" && (
+                    <TouchableOpacity onPress={() => navigation.navigate('SurveyScreen', { post: post })} style={{ flex: 1, alignItems: "flex-end" }}>
+                        <Text style={{color: '#007BFF'}}>Tiến hành khảo sát</Text>
+                    </TouchableOpacity>
+                )}
+                </View>
             </View>
 
             <Text style={styles.content}>{post.content}</Text>
@@ -160,11 +179,9 @@ export const PostItem = ({ post }) => {
                         )}
                     </View>
                 )}
-                <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: handleCommentAdded })} />
+                <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: updateCommentCount })} />
                 <Text style={styles.interactionText}>{commentCount}</Text>
             </View>
-
-            
         </View>
     );
 };
@@ -267,5 +284,5 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "#555",
         marginLeft: 5,
-    },
-});
+    }
+})
