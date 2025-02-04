@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, Image, FlatList, StyleSheet, TouchableOpacity, TextInput, Button, KeyboardAvoidingView, Platform } from "react-native";
-import { getPostComments, authApis, endpoints } from "../configs/APIs";
+import { getPostComments, authApis } from "../configs/APIs";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import moment from "moment";
 import 'moment/locale/vi';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { Icon, IconButton } from "react-native-paper";
+import { IconButton } from "react-native-paper";
+
 
 moment.locale("vi");
 
@@ -34,8 +35,9 @@ const MAX_REPLY_DEPTH = 3;
 const PostDetailScreen = ({ navigation, route }) => {
     const { post, onCommentAdded } = route.params;
     const [comments, setComments] = useState([]);
-    const [commentContent, setCommentContent] = useState(null);
-    const [replyContent, setReplyContent] = useState(null);
+    const commentContentRef = useRef("");
+    const [inputKey, setInputKey] = useState(0);
+    const replyContentRef = useRef("");
     const [replyingTo, setReplyingTo] = useState(null);
     const [commentImage, setCommentImage] = useState(null);
     const [replyImage, setReplyImage] = useState(null);
@@ -64,19 +66,23 @@ const PostDetailScreen = ({ navigation, route }) => {
     
     const CommentItem = ({ comment, onReply, depth = 0 }) => {
         return (
-            <View style={[styles.comment, { marginLeft: depth * 20 }]}>
+            <View style={[styles.comment]}>
                 <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.commentAvatar} />
                 <View>
-                    <View style={styles.commentHeader}>
-                        <Text style={styles.commentUser}>{comment.user.username}</Text>
-                        <Text style={styles.commentTime}>{moment(comment.created_date).fromNow()}</Text>
+                    <View style={styles.commentContainer}>
+                        <View style={styles.commentHeader}>
+                            <Text style={styles.commentUser}>{comment.user.username}</Text>
+                            <Text style={styles.commentTime}>{moment(comment.created_date).fromNow()}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', width: '100%' }}>
+                            <Text style={styles.commentText}>{comment.content}</Text>
+                        </View>
+                        {comment.image && (
+                            <Image source={{ uri: getValidImageUrl(comment.image) }} style={styles.commentImage} />
+                        )}
                     </View>
-                    <Text style={styles.commentText}>{comment.content}</Text>
-                    {comment.image && (
-                        <Image source={{ uri: getValidImageUrl(comment.image) }} style={styles.commentImage} />
-                    )}
                     {depth < MAX_REPLY_DEPTH && (
-                        <TouchableOpacity onPress={() => setReplyingTo(comment.id)}>
+                        <TouchableOpacity onPress={() => changeReplyingTo(comment.id)}>
                             <Text style={styles.replyButton}>Trả lời</Text>
                         </TouchableOpacity>
                     )}
@@ -86,8 +92,8 @@ const PostDetailScreen = ({ navigation, route }) => {
                             <View style={styles.replyContainer}>
                                 <TextInput
                                     style={styles.replyInput}
-                                    value={replyContent}
-                                    onChangeText={setReplyContent}
+                                    defaultValue= {replyContentRef.current}
+                                    onChangeText={(text) => (replyContentRef.current = text)}
                                     placeholder="Viết bình luận..."
                                     multiline
                                 />
@@ -129,14 +135,21 @@ const PostDetailScreen = ({ navigation, route }) => {
         fetchComments();
     }, [post.id]);
 
+    const changeReplyingTo = (commentId) => {
+        replyContentRef.current = ""
+        setReplyingTo(commentId)
+    }
+
     const handleComment = async () => {
         try {
-            if (!commentContent) return;
+            const content = commentContentRef.current.trim();
+            commentContentRef.current = "";
+            if (!content) return;
             const token = await AsyncStorage.getItem("token");
             const api = authApis(token);
 
             const formData = new FormData();
-            formData.append('content', commentContent);
+            formData.append('content', content);
             if (commentImage) {
                 formData.append('image', {
                     uri: commentImage,
@@ -151,7 +164,7 @@ const PostDetailScreen = ({ navigation, route }) => {
                 },
             });
 
-            setCommentContent("");
+            setInputKey((prev) => prev + 1);
             setCommentImage(null);
             const data = await getPostComments(post.id);
             setComments(buildCommentTree(data));
@@ -165,12 +178,14 @@ const PostDetailScreen = ({ navigation, route }) => {
 
     const handleReply = async (commentId) => {
         try {
-            if (!replyContent) return;
+            const content = replyContentRef.current.trim();
+            replyContentRef.current = "";
+            if (!content) return;
             const token = await AsyncStorage.getItem("token");
             const api = authApis(token);
 
             const formData = new FormData();
-            formData.append('content', replyContent);
+            formData.append("content", content);
             if (replyImage) {
                 formData.append('image', {
                     uri: replyImage,
@@ -185,7 +200,6 @@ const PostDetailScreen = ({ navigation, route }) => {
                 },
             });
 
-            setReplyContent("");
             setReplyImage(null);
             setReplyingTo(null);
             const data = await getPostComments(post.id);
@@ -225,6 +239,7 @@ const PostDetailScreen = ({ navigation, route }) => {
                                     <Text style={styles.surveyButton}>Tiến hành khảo sát</Text>
                                 </TouchableOpacity>
                             )}
+                            {}
                         </View>
                         <Text style={styles.content}>{post.content}</Text>
                         {post.images && post.images.length > 0 && (
@@ -241,9 +256,10 @@ const PostDetailScreen = ({ navigation, route }) => {
                         <Text style={styles.commentTitle}>Bình luận</Text>
                         <View style={styles.commentInputContainer}>
                             <TextInput
+                                key={inputKey}
                                 style={styles.commentInput}
-                                value={commentContent}
-                                onChangeText={setCommentContent}
+                                defaultValue={commentContentRef.current}
+                                onChangeText={(text) => (commentContentRef.current = text)}
                                 placeholder="Viết bình luận..."
                                 multiline
                             />
@@ -271,11 +287,11 @@ const PostDetailScreen = ({ navigation, route }) => {
 };
 
 export const styles = StyleSheet.create({
-    commentContainer: { flexDirection: "row", marginTop: 10 },
+    commentContainer: { backgroundColor: '#eeee', borderRadius: 10, padding:10 },
     container: {
         padding: 16,
         backgroundColor: "#fff",
-        flex: 1
+        flex: 1,
     },
     post: {
         flexDirection: "row",
@@ -313,7 +329,7 @@ export const styles = StyleSheet.create({
     comment: {
         flexDirection: "row",
         alignItems: "flex-start",
-        marginTop: 10
+        marginTop: 10,
     },
     commentHeader: {
         flexDirection: "row",
@@ -331,7 +347,8 @@ export const styles = StyleSheet.create({
     },
     commentText: {
         fontSize: 14,
-        flex: 1,
+        wordBreak: 'break-word',
+        flex: 1
     },
     imagesContainer: {
         flexDirection: "column",
