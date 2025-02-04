@@ -1,5 +1,6 @@
 import json
 import os
+from encodings import search_function
 
 from django.db import IntegrityError
 from cloudinary.exceptions import Error
@@ -69,6 +70,19 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
     queryset = Post.objects.filter(active=True)
     serializer_class = PostSerializer
     parser_classes = [JSONParser, MultiPartParser, ]
+
+    def get_queryset(self):
+        query = self.queryset
+        q = self.request.query_params.get("q")
+        if q:
+            query = query.filter(content__icontains=q)
+        return query
+
+    @action(methods=['get'], url_path='my-posts', detail=False, permission_classes=[IsAuthenticated])
+    def get_my_posts(self, request):
+        posts = Post.objects.filter(user=request.user, active=True)
+        serializer = self.get_serializer(posts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request):
         self.permission_classes = [IsAuthenticated]
