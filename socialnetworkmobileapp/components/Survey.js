@@ -37,7 +37,6 @@ const Survey = ({ route }) => {
             const surveyData = await getSurveyData(post.id);
             setSurvey(surveyData);
         };
-        fetchSurvey();
 
         const fetchDraft = async () => {
             try {

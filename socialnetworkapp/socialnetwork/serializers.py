@@ -49,6 +49,8 @@ class PostSerializer(ModelSerializer):
     def get_object_type(self, obj):
         if SurveyPost.objects.filter(pk=obj.pk).exists():
             return "survey"
+        elif InvitationPost.objects.filter(pk=obj.pk).exists():
+            return "invitation"
         return "post"
 
 

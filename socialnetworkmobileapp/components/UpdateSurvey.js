@@ -12,58 +12,66 @@ const surveyTypes = [
     { label: 'Employment Situation', value: 4 },
 ];
 
-const CreateSurvey = ({ route }) => {
+const UpdateSurvey  = ({ route }) => {
+    const { post } = route.params
     const [surveyType, setSurveyType] = useState(route.params?.surveyType || 1);
     const [endTime, setEndTime] = useState(route.params?.endTime || new Date());
-    const [questions, setQuestions] = useState(route.params?.questions || [{ question: '', options: [{ option: '' }], multi_choice: false }]);
+    const [questions, setQuestions] = useState(route.params?.questions || [{id: '', question: '', options: [{id: '', option: '' }], multi_choice: false }]);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const navigation = useNavigation();
 
     const handleAddQuestion = () => {
-        setQuestions([...questions, { question: '', options: [{ option: '' }], multi_choice: false }]);
+        const newQuestion = {
+          id: generateTempId(),
+          question: '',
+          options: [{ id: generateTempId(), option: '' }],
+          multi_choice: false,
+        };
+        setQuestions([...questions, newQuestion]);
     };
 
-    const handleAddOption = (index) => {
-        const newQuestions = questions.map((q, qIndex) => {
-            if (qIndex === index) {
-                return { ...q, options: [...q.options, { option: '' }] };
-            }
-            return q;
+    const handleAddOption = (questionId) => {
+        const newQuestions = questions.map((q) => {
+          if (q.id === questionId) {
+            const newOption = { id: generateTempId(), option: '' };
+            return { ...q, options: [...q.options, newOption] };
+          }
+          return q;
         });
         setQuestions(newQuestions);
     };
+      
 
-    const handleQuestionChange = (text, index) => {
-        const newQuestions = questions.map((q, qIndex) => {
-            if (qIndex === index) {
-                return { ...q, question: text };
-            }
-            return q;
+    const handleQuestionChange = (text, questionId) => {
+        const newQuestions = questions.map((q) => {
+          if (q.id === questionId) {
+            return { ...q, question: text };
+          }
+          return q;
         });
         setQuestions(newQuestions);
-    };
+      };
 
-    const handleOptionChange = (text, qIndex, oIndex) => {
-        const newQuestions = questions.map((q, questionIndex) => {
-            if (questionIndex === qIndex) {
-                const newOptions = q.options.map((o, optionIndex) => {
-                    if (optionIndex === oIndex) {
-                        return { option: text };
-                    }
-                    return o;
-                });
-                return { ...q, options: newOptions };
-            }
-            return q;
+    const handleOptionChange = (text, questionId, optionId) => {
+        const newQuestions = questions.map((q) => {
+          if (q.id === questionId) {
+            const newOptions = q.options.map((o) => {
+              if (o.id === optionId) {
+                return { ...o, option: text };
+              }
+              return o;
+            });
+            return { ...q, options: newOptions };
+          }
+          return q;
         });
         setQuestions(newQuestions);
-    };
-    
+      };
 
-    const handleMultiChoiceChange = (value, index) => {
-        const newQuestions = questions.map((q, qIndex) => {
-            if (qIndex === index) {
-                return { ...q, multi_choice: value };
+    const handleMultiChoiceChange = (value, questionId) => {
+        const newQuestions = questions.map((q) => {
+            if (q.id === questionId) {
+            return { ...q, multi_choice: value };
             }
             return q;
         });
@@ -82,24 +90,30 @@ const CreateSurvey = ({ route }) => {
         const areQuestionsValid = Array.isArray(questions) && questions.length > 0 && questions.every(q => q.question !== '' && Array.isArray(q.options) && q.options.length > 0);
 
         if (isSurveyTypeValid && isEndTimeValid && areQuestionsValid)
-            navigation.navigate('CreatePostScreen', { surveyType, endTime: endTime.toISOString(), questions });
+            navigation.navigate('UpdatePostScreen', { surveyType, endTime: endTime.toISOString(), questions, post, origin: "UpdateSurveyScreen" });
         else
             Alert.alert('Tạo khảo sát','Vui lòng điền đầy đủ thông tin.');
     };
 
-    const handleDeleteQuestion = (qIndex) => {
-        const updatedQuestions = [...questions];
-        updatedQuestions.splice(qIndex, 1);
+    const handleDeleteQuestion = (questionId) => {
+        const updatedQuestions = questions.filter((q) => q.id !== questionId);
         setQuestions(updatedQuestions);
-      };
+    };
     
-      const handleDeleteOption = (qIndex, oIndex) => {
-        const updatedQuestions = [...questions];
-        const updatedOptions = [...updatedQuestions[qIndex].options];
-        updatedOptions.splice(oIndex, 1);
-        updatedQuestions[qIndex].options = updatedOptions;
-        setQuestions(updatedQuestions);
-      };
+    const handleDeleteOption = (questionId, optionId) => {
+        const newQuestions = questions.map((q) => {
+            if (q.id === questionId) {
+            const updatedOptions = q.options.filter((o) => o.id !== optionId);
+            return { ...q, options: updatedOptions };
+            }
+            return q;
+        });
+        setQuestions(newQuestions);
+    };
+
+    const generateTempId = () => {
+        return Date.now() + Math.random().toString(36).substring(2, 9);
+    };
     
 
     return (
@@ -131,57 +145,60 @@ const CreateSurvey = ({ route }) => {
                     )}
                 </View>
             </View>
-            {questions.map((question, qIndex) => (
-                <View key={qIndex} style={styles.questionContainer}>
-                <View style={styles.questionHeader}>
+            {questions.map((question) => (
+                <View key={question.id} style={styles.questionContainer}>
+                    <View style={styles.questionHeader}>
                     <TextInput
-                    placeholder={`Question ${qIndex + 1}`}
-                    value={question.question}
-                    onChangeText={(text) => handleQuestionChange(text, qIndex)}
-                    style={{ flex: 1, borderWidth: 1, borderRadius: 10, padding: 10 }}
+                        placeholder="Question"
+                        value={question.question}
+                        onChangeText={(text) => handleQuestionChange(text, question.id)}
+                        style={{ flex: 1, borderWidth: 1, borderRadius: 10, padding: 10 }}
                     />
-                    {qIndex != 0 ? (<IconButton
+                    <IconButton
                         icon="close"
-                        iconColor='red'
-                        mode='contained'
+                        iconColor="red"
+                        mode="contained"
                         size={30}
-                        onPress={() => handleDeleteQuestion(qIndex)}
+                        onPress={() => handleDeleteQuestion(question.id)}
                         style={styles.deleteButton}
-                    />) : null}
-                </View>
-                {question.options.map((option, oIndex) => (
-                    <View key={oIndex} style={styles.optionContainer}>
-                        <TextInput
-                            placeholder={`Option ${oIndex + 1}`}
-                            value={option.option}
-                            onChangeText={(text) => handleOptionChange(text, qIndex, oIndex)}
-                            style={styles.optionInput}
-                        />
-                        {oIndex != 0 ? (<IconButton
-                            icon="minus"
-                            mode='outlined'
-                            size={20}
-                            onPress={() => handleDeleteOption(qIndex, oIndex)}
-                            style={styles.deleteButton}
-                        />) : null}
-                    </View>
-                ))}
-                <IconButton
-                        icon="plus"
-                        mode='outlined'
-                        size={20}
-                        onPress={() => handleAddOption(qIndex)}
-                        style={styles.addButton}
                     />
-                <View style={styles.switchContainer}>
+                    </View>
+                    {/* Render các lựa chọn */}
+                    {question.options.map((option) => (
+                    <View key={option.id} style={styles.optionContainer}>
+                        <TextInput
+                        placeholder="Option"
+                        value={option.option}
+                        onChangeText={(text) => handleOptionChange(text, question.id, option.id)}
+                        style={styles.optionInput}
+                        />
+                        <IconButton
+                        icon="minus"
+                        mode="outlined"
+                        size={20}
+                        onPress={() => handleDeleteOption(question.id, option.id)}
+                        style={styles.deleteButton}
+                        />
+                    </View>
+                    ))}
+                    {/* Nút thêm lựa chọn */}
+                    <IconButton
+                    icon="plus"
+                    mode="outlined"
+                    size={20}
+                    onPress={() => handleAddOption(question.id)}
+                    style={styles.addButton}
+                    />
+                    {/* Switch multi_choice */}
+                    <View style={styles.switchContainer}>
                     <Text>Multi Choice</Text>
                     <Switch
-                    value={question.multi_choice}
-                    onValueChange={(value) => handleMultiChoiceChange(value, qIndex)}
+                        value={question.multi_choice}
+                        onValueChange={(value) => handleMultiChoiceChange(value, question.id)}
                     />
+                    </View>
                 </View>
-                </View>
-            ))}
+                ))}
             <IconButton
                 icon="plus"
                 iconColor='blue'
@@ -243,4 +260,4 @@ const styles = StyleSheet.create({
     },
   });
 
-export default CreateSurvey;
+export default UpdateSurvey
