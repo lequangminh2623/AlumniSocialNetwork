@@ -17,6 +17,7 @@ const CreateSurvey = ({ route }) => {
     const [endTime, setEndTime] = useState(route.params?.endTime || new Date());
     const [questions, setQuestions] = useState(route.params?.questions || [{ question: '', options: [{ option: '' }], multi_choice: false }]);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [hideInvitationButton, setHideInvitationButton] = useState(false);
     const navigation = useNavigation();
 
     const handleAddQuestion = () => {
@@ -80,10 +81,12 @@ const CreateSurvey = ({ route }) => {
         const isEndTimeValid = endTime instanceof Date && !isNaN(endTime);
         const areQuestionsValid = Array.isArray(questions) && questions.length > 0 && questions.every(q => q.question !== '' && Array.isArray(q.options) && q.options.length > 0);
 
-        if (isSurveyTypeValid && isEndTimeValid && areQuestionsValid)
-            navigation.navigate('CreatePostScreen', { surveyType, endTime: endTime.toISOString(), questions });
-        else
+        if (isSurveyTypeValid && isEndTimeValid && areQuestionsValid) {
+            setHideInvitationButton(true);
+            navigation.navigate('CreatePostScreen', { surveyType, endTime: endTime.toISOString(), questions, hideInvitationButton: true });
+        } else {
             Alert.alert('Tạo khảo sát','Vui lòng điền đầy đủ thông tin.');
+        }
     };
 
     const handleDeleteQuestion = (qIndex) => {

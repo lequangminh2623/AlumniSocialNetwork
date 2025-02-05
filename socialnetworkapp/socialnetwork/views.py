@@ -35,6 +35,12 @@ def index(request):
 class UserViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+    @action(methods=['get'], url_path='all-users', detail=False, permission_classes=[AdminPermission])
+    def get_all_users(self, request):
+        users = User.objects.filter(is_active=True)
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @action(methods=['get'], url_path='current', detail=False)
     def get_current_user(self, request):
         user = request.user

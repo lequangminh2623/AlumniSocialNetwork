@@ -24,6 +24,7 @@ export const endpoints = {
     'submit': surveyId => `/survey/${surveyId}/submit/`,
     'resume': surveyId => `/survey/${surveyId}/resume/`,
     'group': '/group/',
+    'all-users':'/user/all-users/',
     'invitation': '/invitation/',
 }
 

@@ -16,12 +16,23 @@ const CreatePostScreen = ({ route }) => {
     const [surveyType, setSurveyType] = useState('');
     const [endTime, setEndTime] = useState('');
     const [questions, setQuestions] = useState([{ question: '', options: [{ option: '' }] }]);
+    const [hideSurveyButton, setHideSurveyButton] = useState(false);
+    const [hideInvitationButton, setHideInvitationButton] = useState(false);
+    const [userList, setUserList] = useState([]);
+    const [groupList, setGroupList] = useState([]);
+    const [eventName, setEventName] = useState("");
     const navigation = useNavigation();
 
     useEffect(() => {
         if (route.params?.surveyType) setSurveyType(route.params.surveyType);
         if (route.params?.endTime) setEndTime(new Date(route.params.endTime));
         if (route.params?.questions) setQuestions(route.params.questions);
+        if (route.params?.hideSurveyButton) setHideSurveyButton(route.params.hideSurveyButton);
+        if (route.params?.hideInvitationButton) setHideInvitationButton(route.params.hideInvitationButton);
+        
+        if (route.params?.user) setUserList(route.params.user);
+        if (route.params?.group) setGroupList(route.params.group);
+        if (route.params?.eventName) setEventName(route.params.eventName);
     }, [route.params]);
 
     // Chọn ảnh từ thư viện
@@ -81,6 +92,10 @@ const CreatePostScreen = ({ route }) => {
         const isSurveyTypeValid = surveyType !== '';
         const isEndTimeValid = endTime instanceof Date && !isNaN(endTime);
         const areQuestionsValid = Array.isArray(questions) && questions.length > 0 && questions.every(q => q.question !== '' && Array.isArray(q.options) && q.options.length > 0);
+        
+        const isUserListValid = userList !== 0;
+        const isGroupListValid = groupList !== 0;
+        const isEventNameValid = eventName.trim() !== '';
 
         if (isSurveyTypeValid && isEndTimeValid && areQuestionsValid) {
 
@@ -106,7 +121,27 @@ const CreatePostScreen = ({ route }) => {
                 Alert.alert('Đã xảy ra lỗi. Vui lòng thử lại.');
             }
         }
-        else
+        else if ((isUserListValid || isGroupListValid) && isEventNameValid) {
+            formData.append('users', JSON.stringify(userList));
+            formData.append('groups', JSON.stringify(groupList));
+            formData.append('event_name', eventName);
+            try {
+                const response = await axios.post(endpoints['invitation'], formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+                if (response.status === 201) {
+                    navigation.navigate('HomeStack', { screen: 'HomeScreen' });
+                } else {
+                    Alert.alert('Gửi lời mời không thành công');
+                }
+            } catch (error) {
+                console.error("Error submitting invitation:", error);
+                Alert.alert('Đã xảy ra lỗi. Vui lòng thử lại.');
+            }
+        } else {
             try {
                 const response = await axios.post(endpoints.post, formData, {
                     headers: {
@@ -117,7 +152,7 @@ const CreatePostScreen = ({ route }) => {
 
                 if (response.status === 201) {
                     Alert.alert('Đăng bài thành công!');
-                    navigation.goBack();
+                    navigation.navigate('HomeStack', { screen: 'HomeScreen' });
                 } else {
                     Alert.alert('Đăng bài không thành công');
                 }
@@ -125,6 +160,7 @@ const CreatePostScreen = ({ route }) => {
                 console.error("Error submitting post:", error);
                 Alert.alert('Đã xảy ra lỗi. Vui lòng thử lại.');
             }
+        }
     };
 
     return (
@@ -163,11 +199,11 @@ const CreatePostScreen = ({ route }) => {
             </ScrollView>
             <View style={styles.buttonContainer}>
                 <Button style={styles.pickImagesButton} mode="outlined" onPress={pickImages}>Chọn ảnh</Button>
-                {user.role === 0 && (
-                    <>
-                        <Button style={styles.createSurveyButton} mode="outlined" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions })}>Tạo khảo sát</Button>
-                        <Button style={styles.createInvitationButton} mode="outlined">Tạo thư mời</Button>
-                    </>
+                {!hideSurveyButton && user.role === 0 && (
+                    <Button style={styles.createSurveyButton} mode="outlined" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions })}>Tạo khảo sát</Button>
+                )}
+                {user.role === 0 && !hideInvitationButton && (
+                    <Button style={styles.createInvitationButton} mode="outlined" onPress={() => navigation.navigate('CreateInvitationScreen', { userList, groupList, eventName })}>Tạo thư mời</Button>
                 )}
                 <Button style={styles.submitButton} mode="contained" onPress={submitPost}>Đăng bài</Button>
             </View>
