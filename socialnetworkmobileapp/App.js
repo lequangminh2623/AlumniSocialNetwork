@@ -20,6 +20,8 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import CreateSurvey from './components/CreateSurvey';
 import Survey from './components/Survey';
 import CreateInvitation from './components/CreateInvitation';
+import UpdatePost from './components/UpdatePost';
+import UpdateSurvey from './components/UpdateSurvey';
 
 const Stack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
@@ -50,6 +52,8 @@ const HomeStackNavigator = () => {
             <Stack.Screen name="CreateSurveyScreen" component={CreateSurvey} options={{ title: 'Tạo khảo sát' }}/>
             <Stack.Screen name="CreateInvitationScreen" component={CreateInvitation} options={{ title: 'Tạo thư mời' }}/>
             <Stack.Screen name="SurveyScreen" component={Survey} options={{ title: 'Khảo sát' }}/>
+            <Stack.Screen name="UpdatePostScreen" component={UpdatePost} options={{ title: 'Chỉnh sửa bài viết' }} />
+            <Stack.Screen name="UpdateSurveyScreen" component={UpdateSurvey} options={{ title: 'Chỉnh sửa khảo sát' }}/>
         </Stack.Navigator>
     );
 };

@@ -452,28 +452,24 @@ class SurveyPostViewSet(viewsets.ViewSet):
         survey_type = request.data.get('survey_type', survey_post.survey_type)
         end_time = request.data.get('end_time', survey_post.end_time)
         questions_data = request.data.get('questions', [])
+        questions_data = json.loads(questions_data)
 
         survey_post.content = content
         survey_post.survey_type = survey_type
         survey_post.end_time = end_time
         survey_post.save()
 
-        existing_images = {image.image: image for image in survey_post.images.all()}
-        new_image_urls = []
-
-        for image in images:
-            try:
-                upload_result = upload(image, folder='MangXaHoi')
-                image_url = upload_result.get('secure_url')
-                new_image_urls.append(image_url)
-                if image_url not in existing_images:
+        PostImage.objects.filter(post=survey_post).delete()
+        if images:
+            for image in images:
+                try:
+                    upload_result = upload(image, folder='MangXaHoi')
+                    image_url = upload_result.get('secure_url')
                     PostImage.objects.create(post=survey_post, image=image_url)
-            except Error as e:
-                return Response({"error": f"Lỗi cập nhật hình ảnh: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+                except Error as e:
+                    return Response({"error": f"Lỗi đăng ảnh: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            survey_post.save()
 
-        # Remove deleted images
-        images_to_delete = set(existing_images.keys()) - set(new_image_urls)
-        PostImage.objects.filter(image__in=images_to_delete).delete()
         existing_questions = {q.id: q for q in survey_post.questions.all()}
         question_ids = [int(q.get('id')) for q in questions_data if q.get('id')]
 
@@ -495,10 +491,12 @@ class SurveyPostViewSet(viewsets.ViewSet):
                             setattr(option_instance, attr, value)
                         option_instance.save()
                     else:
+                        del option_data['id']
                         SurveyOption.objects.create(survey_question=question_instance, **option_data)
                 options_to_delete = set(existing_options.keys()) - set(option_ids)
                 SurveyOption.objects.filter(id__in=options_to_delete).delete()
             else:
+                del questions_data['id']
                 SurveyQuestion.objects.create(survey_post=survey_post, **question_data)
         questions_to_delete = set(existing_questions.keys()) - set(question_ids)
         SurveyQuestion.objects.filter(id__in=questions_to_delete).delete()
