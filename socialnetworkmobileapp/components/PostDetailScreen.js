@@ -51,12 +51,12 @@ const PostDetailScreen = ({ route }) => {
         if (!Array.isArray(comments)) return [];
         let commentMap = new Map();
         let rootComments = [];
-        
+
         comments.forEach(comment => {
             comment.replies = [];
             commentMap.set(comment.id, comment);
         });
-        
+
         comments.forEach(comment => {
             if (comment.parent) {
                 commentMap.get(comment.parent)?.replies.push(comment);
@@ -64,10 +64,10 @@ const PostDetailScreen = ({ route }) => {
                 rootComments.push(comment);
             }
         });
-        
+
         return rootComments;
     };
-    
+
     const CommentItem = ({ comment, onReply, depth = 0 }) => {
         return (
             <View style={[styles.comment]}>
@@ -75,7 +75,9 @@ const PostDetailScreen = ({ route }) => {
                 <View>
                     <View style={styles.commentContainer}>
                         <View style={styles.commentHeader}>
-                            <Text style={styles.commentUser}>{comment.user.username}</Text>
+                            {comment.user.first_name || comment.user.last_name ? (
+                                <Text style={styles.commentUser}>{comment.user.first_name} {comment.user.last_name}</Text>
+                            ) : (<Text style={styles.commentUser}>Quản Trị Viên</Text>)}
                             <Text style={styles.commentTime}>{moment(comment.created_date).fromNow()}</Text>
                         </View>
                         <View style={{ flexDirection: 'row', width: '100%' }}>
@@ -96,7 +98,7 @@ const PostDetailScreen = ({ route }) => {
                             <View style={styles.replyContainer}>
                                 <TextInput
                                     style={styles.replyInput}
-                                    defaultValue= {replyContentRef.current}
+                                    defaultValue={replyContentRef.current}
                                     onChangeText={(text) => (replyContentRef.current = text)}
                                     placeholder="Viết bình luận..."
                                     multiline
@@ -147,7 +149,7 @@ const PostDetailScreen = ({ route }) => {
 
         fetchComments();
     }, [post.id]);
-    
+
 
     const changeReplyingTo = (commentId) => {
         replyContentRef.current = ""
@@ -227,7 +229,7 @@ const PostDetailScreen = ({ route }) => {
             console.error("Error replying to comment:", error);
         }
     };
-    
+
 
 
     return (
@@ -245,12 +247,14 @@ const PostDetailScreen = ({ route }) => {
                         <View style={styles.post}>
                             <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.avatar} />
                             <View>
-                                <Text style={styles.username}>{post.user.username}</Text>
+                                {post.user.first_name || post.user.last_name ? (
+                                    <Text style={styles.username}>{post.user.first_name} {post.user.last_name}</Text>
+                                ) : (<Text style={styles.username}>Quản Trị Viên</Text>)}
                                 <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>
                             </View>
                             {post.object_type === "survey" && (
                                 <TouchableOpacity onPress={() => navigation.navigate('SurveyScreen', { post: post })} style={{ flex: 1, alignItems: "flex-end" }}>
-                                    <Text style={{color: '#007BFF'}}>Tiến hành khảo sát</Text>
+                                    <Text style={{ color: '#007BFF' }}>Tiến hành khảo sát</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -300,7 +304,7 @@ const PostDetailScreen = ({ route }) => {
 };
 
 export const styles = StyleSheet.create({
-    commentContainer: { backgroundColor: '#eeee', borderRadius: 10, padding:10 },
+    commentContainer: { backgroundColor: '#eeee', borderRadius: 10, padding: 10 },
     container: {
         padding: 16,
         backgroundColor: "#fff",

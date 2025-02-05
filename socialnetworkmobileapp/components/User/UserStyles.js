@@ -1,4 +1,6 @@
-import { StyleSheet} from "react-native";
+import { StyleSheet } from "react-native";
+import { hp } from "../../styles/common";
+import { theme } from "../../styles/theme";
 
 export default styles = StyleSheet.create({
     container: {
@@ -53,8 +55,8 @@ export default styles = StyleSheet.create({
         margin: 30,
     },
     switchText: {
-       alignItems: 'center',
-       color: 'black',
+        alignItems: 'center',
+        color: 'black',
     },
     cardContainer: {
         flex: 1,
@@ -94,6 +96,8 @@ export default styles = StyleSheet.create({
         fontSize: 16,
         color: '#555', // Slightly darker color
         marginBottom: 5,
+        color: theme.colors.textDark,
+        fontWeight: theme.fonts.bold,
     },
     email: {
         fontSize: 14,

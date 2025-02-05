@@ -99,7 +99,9 @@ export const PostItem = ({ post, onPostDeleted, onPostUpdated }) => {
             <View style={styles.userInfo}>
                 <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.avatar} />
                 <View>
-                    <Text style={styles.username}>{post.user.first_name} {post.user.last_name}</Text>
+                    {post.user.first_name || post.user.last_name?(
+                        <Text style={styles.username}>{post.user.first_name} {post.user.last_name}</Text>
+                    ):(<Text style={styles.username}>Quản Trị Viên</Text>)}
                     <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>
                 </View>
                 {(user.role === 0 || user.id === post.user.id) && (

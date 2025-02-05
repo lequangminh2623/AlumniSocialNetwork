@@ -30,8 +30,9 @@ const CreatePostScreen = ({ route }) => {
         if (route.params?.hideSurveyButton) setHideSurveyButton(route.params.hideSurveyButton);
         if (route.params?.hideInvitationButton) setHideInvitationButton(route.params.hideInvitationButton);
         
-        if (route.params?.user) setUserList(route.params.user);
-        if (route.params?.group) setGroupList(route.params.group);
+        if (route.params?.selectedUsers) setUserList(route.params.selectedUsers);
+        if (route.params?.selectedGroups) setGroupList(route.params.selectedGroups);
+        console.log(route.params);
         if (route.params?.eventName) setEventName(route.params.eventName);
     }, [route.params]);
 
@@ -97,6 +98,9 @@ const CreatePostScreen = ({ route }) => {
         const isGroupListValid = groupList !== 0;
         const isEventNameValid = eventName.trim() !== '';
 
+        console.log(userList, groupList, eventName);
+        console.log(isUserListValid, isGroupListValid, isEventNameValid);
+
         if (isSurveyTypeValid && isEndTimeValid && areQuestionsValid) {
 
             formData.append('survey_type', surveyType);
@@ -122,8 +126,12 @@ const CreatePostScreen = ({ route }) => {
             }
         }
         else if ((isUserListValid || isGroupListValid) && isEventNameValid) {
-            formData.append('users', JSON.stringify(userList));
-            formData.append('groups', JSON.stringify(groupList));
+            userList.forEach((user, index) => {
+                formData.append('users', user);
+            });
+            groupList.forEach((group, index) => {
+                formData.append('groups', group);
+            });
             formData.append('event_name', eventName);
             try {
                 const response = await axios.post(endpoints['invitation'], formData, {
@@ -132,7 +140,9 @@ const CreatePostScreen = ({ route }) => {
                         'Authorization': `Bearer ${token}`,
                     },
                 });
+    
                 if (response.status === 201) {
+                    Alert.alert('Gửi lời mời thành công!');
                     navigation.navigate('HomeStack', { screen: 'HomeScreen' });
                 } else {
                     Alert.alert('Gửi lời mời không thành công');

@@ -28,17 +28,19 @@ const UserProfile = () => {
                     style={styles.avatar}
                 />
                 <View style={styles.textContainer}>
-                  <Text style={styles.name}>{user?.last_name} {user?.first_name}</Text>
-                  <Text style={styles.username}>{user?.username}</Text>
-                  <Text style={styles.email}> {user?.email}</Text>
+                    {user.first_name || user.last_name ? (
+                        <Text style={styles.username}>{user.first_name} {user.last_name}</Text>
+                    ) : (<Text style={styles.username}>Quản Trị Viên</Text>)}
+                    <Text style={styles.username}>{user?.username}</Text>
+                    <Text style={styles.email}> {user?.email}</Text>
                 </View>
             </View>
-                <TouchableOpacity onPress={() => nav.navigate("ChangePasswordScreen")} style={Styles.menuItem}>
-                    <Text style={Styles.menuText} >Đổi mật khẩu</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={logout}  style={Styles.menuItem}>
-                    <Text style={Styles.menuText} >Đăng xuất</Text>
-                </TouchableOpacity>
+            <TouchableOpacity onPress={() => nav.navigate("ChangePasswordScreen")} style={Styles.menuItem}>
+                <Text style={Styles.menuText} >Đổi mật khẩu</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={logout} style={Styles.menuItem}>
+                <Text style={Styles.menuText} >Đăng xuất</Text>
+            </TouchableOpacity>
         </View>
     );
 };

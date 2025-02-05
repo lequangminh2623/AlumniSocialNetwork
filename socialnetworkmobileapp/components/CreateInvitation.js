@@ -1,80 +1,101 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, TextInput, Text, ScrollView, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { IconButton, Button } from 'react-native-paper';
+import { IconButton, Button, Checkbox } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { authApis, endpoints } from '../configs/APIs'; // Đảm bảo import đúng API endpoint
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CreateInvitation = ({ route }) => {
-    const [user, setUser] = useState(route.params?.user || 0);
+    const [selectedUsers, setSelectedUsers] = useState([]); // Lưu danh sách người dùng đã chọn
+    const [selectedGroups, setSelectedGroups] = useState([]); // Lưu danh sách nhóm đã chọn
     const [group, setGroup] = useState(route.params?.group || 0);
-    const [userList, setUserList] = useState([]);  // Danh sách người dùng từ API
-    const [groupList, setGroupList] = useState([]);  // Danh sách nhóm từ API
-    const navigation = useNavigation();
+    const [userList, setUserList] = useState([]);
+    const [groupList, setGroupList] = useState([]);
     const [token, setToken] = useState(null);
-    const [hideSurveyButton, setHideSurveyButton] = useState(false);
-    const [eventName, setEventName] = useState(''); // Add state for event_name
+    const [eventName, setEventName] = useState('');
+    const navigation = useNavigation();
 
     useEffect(() => {
         const fetchToken = async () => {
-            const storedToken = await AsyncStorage.getItem("token");
+            const storedToken = await AsyncStorage.getItem('token');
             setToken(storedToken);
         };
-
         fetchToken();
     }, []);
 
-    // Lấy danh sách người dùng từ API
+    // Lấy danh sách người dùng
     useEffect(() => {
         const fetchUsers = async () => {
             if (!token) return;
             try {
                 const response = await authApis(token).get(endpoints['all-users']);
-                const userList = Array.isArray(response.data) ? response.data : [];
-                setUserList(userList);  // Cập nhật userList với dữ liệu API
+                setUserList(response.data || []);
             } catch (error) {
-                console.error('Error fetching users:', error);
+                console.error('Lỗi khi lấy danh sách người dùng:', error);
             }
         };
         fetchUsers();
     }, [token]);
 
-    // Lấy danh sách nhóm từ API
+    // Lấy danh sách nhóm
     useEffect(() => {
         const fetchGroups = async () => {
             if (!token) return;
             try {
                 const response = await authApis(token).get(endpoints['group']);
-                const groupList = Array.isArray(response.data.results) ? response.data.results : [];
-                setGroupList(groupList);  // Cập nhật groupList với dữ liệu API
+                setGroupList(response.data.results || []);
             } catch (error) {
-                console.error('Error fetching groups:', error);
+                console.error('Lỗi khi lấy danh sách nhóm:', error);
             }
         };
         fetchGroups();
     }, [token]);
 
-    const handleUserChange = (value) => {
-        setUser(value);
+    // Xử lý chọn/bỏ chọn người dùng
+    const toggleUserSelection = (userId) => {
+        setSelectedUsers((prevSelectedUsers) =>
+            prevSelectedUsers.includes(userId)
+                ? prevSelectedUsers.filter((id) => id !== userId) // Bỏ chọn nếu đã chọn
+                : [...prevSelectedUsers, userId] // Thêm vào danh sách nếu chưa chọn
+        );
     };
 
-    const handleGroupChange = (value) => {
-        setGroup(value);
+    // Xử lý chọn/bỏ chọn nhóm
+    const toggleGroupSelection = (groupId) => {
+        setSelectedGroups((prevSelectedGroups) =>
+            prevSelectedGroups.includes(groupId)
+                ? prevSelectedGroups.filter((id) => id !== groupId) // Bỏ chọn nếu đã chọn
+                : [...prevSelectedGroups, groupId] // Thêm vào danh sách nếu chưa chọn
+        );
+    };
+
+    const handleSelectAllUsers = () => {
+        if (selectedUsers.length === userList.length) {
+            setSelectedUsers([]);
+        } else {
+            setSelectedUsers(userList.map(user => user.id));
+        }
+    };
+
+    const handleSelectAllGroups = () => {
+        if (selectedGroups.length === groupList.length) {
+            setSelectedGroups([]);
+        } else {
+            setSelectedGroups(groupList.map(group => group.id));
+        }
     };
 
     const handleSubmitInvitation = () => {
-        const isUserValid = user !== 0;
-        const isGroupValid = group !== 0;
         const isEventNameValid = eventName.trim() !== '';
-        console.info(user, group, eventName); // Include eventName in the log
-        if ((isUserValid || isGroupValid) && isEventNameValid) {
-            setHideSurveyButton(true);
+        console.log(selectedUsers, selectedGroups, eventName);
+        if ((selectedUsers.length > 0 || selectedGroups.length > 0) && isEventNameValid) {
             navigation.navigate('CreatePostScreen', {
-                user, 
-                group,
-                eventName, 
-                hideSurveyButton: true });
+                selectedUsers,
+                selectedGroups,
+                eventName,
+                hideSurveyButton: true,
+            });
         } else {
             Alert.alert('Tạo lời mời', 'Vui lòng nhập đầy đủ thông tin.');
         }
@@ -89,31 +110,45 @@ const CreateInvitation = ({ route }) => {
                     onChangeText={setEventName}
                     style={styles.input}
                 />
-                <View style={styles.userContainer}>
-                    <Picker
-                        selectedValue={user}
-                        onValueChange={handleUserChange}
-                        style={{ flex: 1 }}
-                    >
-                        {user === 0 && <Picker.Item label="Chọn người dùng" value={0} />}
-                        {userList.map((userItem, index) => (
-                            <Picker.Item key={index} label={userItem.username} value={userItem.id} />
-                        ))}
-                    </Picker>
+                <Text style={styles.label}>Chọn người dùng:</Text>
+                <Button mode="outlined" onPress={handleSelectAllUsers} style={styles.selectAllButton}>
+                    Chọn tất cả
+                </Button>
+                <View style={styles.checkboxContainer}>
+                    {userList.map((userItem) => (
+                        <TouchableOpacity
+                            key={userItem.id}
+                            style={styles.checkboxItem}
+                            onPress={() => toggleUserSelection(userItem.id)}
+                        >
+                            <Checkbox.Android
+                                status={selectedUsers.includes(userItem.id) ? 'checked' : 'unchecked'}
+                                onPress={() => toggleUserSelection(userItem.id)}
+                            />
+                            <Text>{userItem.username}</Text>
+                        </TouchableOpacity>
+                    ))}
                 </View>
-                <View style={styles.userContainer}>
-                    <Picker
-                        selectedValue={group}
-                        onValueChange={handleGroupChange}
-                        style={{ flex: 1 }}
-                    >
-                        {group === 0 && <Picker.Item label="Chọn nhóm" value={0} />}
-                        {groupList.map((groupItem, index) => (
-                            <Picker.Item key={index} label={groupItem.group_name} value={groupItem.id} />
-                        ))}
-                    </Picker>
+                <Text style={styles.label}>Chọn nhóm:</Text>
+                <Button mode="outlined" onPress={handleSelectAllGroups} style={styles.selectAllButton}>
+                    Chọn tất cả
+                </Button>
+                <View style={styles.checkboxContainer}>
+                    {groupList.map((groupItem) => (
+                        <TouchableOpacity
+                            key={groupItem.id}
+                            style={styles.checkboxItem}
+                            onPress={() => toggleGroupSelection(groupItem.id)}
+                        >
+                            <Checkbox.Android
+                                status={selectedGroups.includes(groupItem.id) ? 'checked' : 'unchecked'}
+                                onPress={() => toggleGroupSelection(groupItem.id)}
+                            />
+                            <Text>{groupItem.group_name}</Text>
+                        </TouchableOpacity>
+                    ))}
                 </View>
-                <Button mode="contained" style={{ marginTop: 50 }} onPress={handleSubmitInvitation}>
+                <Button mode="contained" style={{ marginTop: 20 }} onPress={handleSubmitInvitation}>
                     Hoàn tất
                 </Button>
             </View>
@@ -144,6 +179,24 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         marginBottom: 12,
         paddingHorizontal: 8,
+    },
+    label: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginTop: 10,
+        marginBottom: 5,
+    },
+    checkboxContainer: {
+        marginBottom: 20,
+    },
+    checkboxItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+    },
+    selectAllButton: {
+        marginTop: 10,
+        marginBottom: 10,
     },
 });
 
