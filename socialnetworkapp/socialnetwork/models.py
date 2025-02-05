@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db import models
 from cloudinary.models import CloudinaryField
 from enum import IntEnum
@@ -127,6 +128,14 @@ class SurveyQuestion(models.Model):
     multi_choice = models.BooleanField(default=False)
 
     survey_post = models.ForeignKey(SurveyPost, on_delete=models.CASCADE, related_name='questions')
+
+    def clean(self):
+        if self.options.count() < 2:
+            raise ValidationError("Each question must have at least 2 options.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.question

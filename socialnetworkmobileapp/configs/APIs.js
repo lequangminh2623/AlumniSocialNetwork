@@ -25,6 +25,7 @@ export const endpoints = {
     'resume': surveyId => `/survey/${surveyId}/resume/`,
     'group': '/group/',
     'invitation': '/invitation/',
+    'my-posts': '/post/my-posts',
 }
 
 export const getPostComments = async (postId) => {

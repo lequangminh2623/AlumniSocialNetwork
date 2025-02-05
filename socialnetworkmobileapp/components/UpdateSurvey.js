@@ -112,104 +112,106 @@ const UpdateSurvey  = ({ route }) => {
     };
 
     const generateTempId = () => {
-        return Date.now() + Math.random().toString(36).substring(2, 9);
-    };
+      return Math.floor(Date.now() + Math.random() * 1e6);
+  };
     
 
-    return (
-        <ScrollView contentContainerStyle={{ padding: 16}}>
-            <View style={styles.questionContainer}>
-                <Picker
-                    selectedValue={surveyType}
-                    onValueChange={(itemValue) => setSurveyType(itemValue)}
-                    style={{ marginBottom: 16,}}
-                >
-                    {surveyTypes.map((type) => (
-                        <Picker.Item key={type.value} label={type.label} value={type.value} />
-                    ))}
-                </Picker>
-                <View style={styles.datePickerContainer}>
-                    <Text style={{ marginLeft: 15 }}>Thời hạn: {endTime.toDateString()}</Text>
-                    <IconButton
-                        icon="calendar"
-                        size={24}
-                        onPress={() => setShowDatePicker(true)}
+  return (
+    <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <View style={styles.questionContainer}>
+            <Picker
+                selectedValue={surveyType}
+                onValueChange={(itemValue) => setSurveyType(itemValue)}
+                style={{ marginBottom: 16 }}
+            >
+                {surveyTypes.map((type) => (
+                    <Picker.Item key={type.value} label={type.label} value={type.value} />
+                ))}
+            </Picker>
+            <View style={styles.datePickerContainer}>
+                <Text style={{ marginLeft: 15 }}>Thời hạn: {endTime.toDateString()}</Text>
+                <IconButton
+                    icon="calendar"
+                    size={24}
+                    onPress={() => setShowDatePicker(true)}
+                />
+                {showDatePicker && (
+                    <DateTimePicker
+                        value={endTime}
+                        mode="date"
+                        display="default"
+                        onChange={handleDateChange}
                     />
-                    {showDatePicker && (
-                        <DateTimePicker
-                            value={endTime}
-                            mode="date"
-                            display="default"
-                            onChange={handleDateChange}
-                        />
-                    )}
-                </View>
+                )}
             </View>
-            {questions.map((question) => (
-                <View key={question.id} style={styles.questionContainer}>
-                    <View style={styles.questionHeader}>
+        </View>
+        {questions.map((question) => (
+            <View key={question.id} style={styles.questionContainer}>
+                <View style={styles.questionHeader}>
                     <TextInput
                         placeholder="Question"
                         value={question.question}
                         onChangeText={(text) => handleQuestionChange(text, question.id)}
                         style={{ flex: 1, borderWidth: 1, borderRadius: 10, padding: 10 }}
                     />
-                    <IconButton
-                        icon="close"
-                        iconColor="red"
-                        mode="contained"
-                        size={30}
-                        onPress={() => handleDeleteQuestion(question.id)}
-                        style={styles.deleteButton}
-                    />
-                    </View>
-                    {/* Render các lựa chọn */}
-                    {question.options.map((option) => (
+                    {questions.length > 1 && (
+                        <IconButton
+                            icon="close"
+                            iconColor="red"
+                            mode="contained"
+                            size={30}
+                            onPress={() => handleDeleteQuestion(question.id)}
+                            style={styles.deleteButton}
+                        />
+                    )}
+                </View>
+                {question.options.map((option) => (
                     <View key={option.id} style={styles.optionContainer}>
                         <TextInput
-                        placeholder="Option"
-                        value={option.option}
-                        onChangeText={(text) => handleOptionChange(text, question.id, option.id)}
-                        style={styles.optionInput}
+                            placeholder="Option"
+                            value={option.option}
+                            onChangeText={(text) => handleOptionChange(text, question.id, option.id)}
+                            style={styles.optionInput}
                         />
-                        <IconButton
-                        icon="minus"
-                        mode="outlined"
-                        size={20}
-                        onPress={() => handleDeleteOption(question.id, option.id)}
-                        style={styles.deleteButton}
-                        />
+                        {question.options.length > 2 && (
+                            <IconButton
+                                icon="minus"
+                                mode="outlined"
+                                size={20}
+                                onPress={() => handleDeleteOption(question.id, option.id)}
+                                style={styles.deleteButton}
+                            />
+                        )}
                     </View>
-                    ))}
-                    {/* Nút thêm lựa chọn */}
-                    <IconButton
+                ))}
+                <IconButton
                     icon="plus"
                     mode="outlined"
                     size={20}
                     onPress={() => handleAddOption(question.id)}
                     style={styles.addButton}
-                    />
-                    {/* Switch multi_choice */}
-                    <View style={styles.switchContainer}>
+                />
+                <View style={styles.switchContainer}>
                     <Text>Multi Choice</Text>
                     <Switch
                         value={question.multi_choice}
                         onValueChange={(value) => handleMultiChoiceChange(value, question.id)}
                     />
-                    </View>
                 </View>
-                ))}
-            <IconButton
-                icon="plus"
-                iconColor='blue'
-                mode='contained'
-                size={30}
-                onPress={handleAddQuestion}
-                style={styles.addButton}
-            />
-            <Button mode="contained" style={{marginTop: 50}} onPress={handleSubmitSurvey}>Hoàn tất</Button>
-        </ScrollView>
-    );
+            </View>
+        ))}
+        <IconButton
+            icon="plus"
+            iconColor='blue'
+            mode='contained'
+            size={30}
+            onPress={handleAddQuestion}
+            style={styles.addButton}
+        />
+        <Button mode="contained" style={{ marginTop: 50 }} onPress={handleSubmitSurvey}>Hoàn tất</Button>
+    </ScrollView>
+  );
+
 };
 
 const styles = StyleSheet.create({
