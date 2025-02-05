@@ -46,6 +46,7 @@ const PostDetailScreen = ({ route }) => {
     const [token, setToken] = useState(null);
     const navigation = useNavigation()
     const cleanAvatarUrlAvatar = post.user.avatar.replace(/^image\/upload\//, "");
+    const [commentsLocked, setCommentsLocked] = useState(post.lock_comment);
 
     const buildCommentTree = (comments) => {
         if (!Array.isArray(comments)) return [];
@@ -68,7 +69,58 @@ const PostDetailScreen = ({ route }) => {
         return rootComments;
     };
 
+
+
+    const handleCommentEdit = async (commentId, newContent, newImage) => {
+        try {
+            const content = newContent.trim();
+            if (!content) return;
+            const api = authApis(token);
+
+            const formData = new FormData();
+            formData.append('content', content);
+            if (newImage) {
+                formData.append('image', {
+                    uri: newImage,
+                    type: 'image/jpeg',
+                    name: 'comment-image.jpg',
+                });
+            }
+
+            await api.put(`/comment/${commentId}/`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            const data = await getPostComments(post.id);
+            setComments(buildCommentTree(data));
+            if (onCommentAdded) {
+                onCommentAdded(data.length);
+            }
+        } catch (error) {
+            console.error("Error editing comment:", error);
+        }
+    };
+
+    const handleToggleCommentsLock = async () => {
+        try {
+            const api = authApis(token);
+            await api.put(`/post/${post.id}/lock-unlock-comment/`);
+            setCommentsLocked(!commentsLocked);
+            navigation.navigate('HomeStack', { screen: 'HomeScreen' });
+        } catch (error) {
+            console.error("Error toggling comments lock:", error);
+        }
+    };
+
     const CommentItem = ({ comment, onReply, depth = 0 }) => {
+        const [isEditing, setIsEditing] = useState(false);
+        const [editContent, setEditContent] = useState(comment.content);
+        const [editImage, setEditImage] = useState(comment.image);
+        
+        
+
         return (
             <View style={[styles.comment]}>
                 <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.commentAvatar} />
@@ -78,20 +130,84 @@ const PostDetailScreen = ({ route }) => {
                             {comment.user.first_name || comment.user.last_name ? (
                                 <Text style={styles.commentUser}>{comment.user.first_name} {comment.user.last_name}</Text>
                             ) : (<Text style={styles.commentUser}>Quản Trị Viên</Text>)}
-                            <Text style={styles.commentTime}>{moment(comment.created_date).fromNow()}</Text>
+                            {(user.role === 0 || user.id === post.user.id || user.id === comment.user.id) && (
+                                <IconButton
+                                    icon="delete"
+                                    color="red"
+                                    size={18}
+                                    onPress={() => handleCommentDelete(comment.id)}
+                                />
+                            )}
+                            {(user.id === comment.user.id) && (
+                                <IconButton
+                                    icon="lead-pencil"
+                                    color="red"
+                                    size={18}
+                                    onPress={() => setIsEditing(true)}
+                                />
+                            )}
                         </View>
-                        <View style={{ flexDirection: 'row', width: '100%' }}>
-                            <Text style={styles.commentText}>{comment.content}</Text>
-                        </View>
-                        {comment.image && (
+
+                        {isEditing ? (
+                            <View>
+                                <TextInput
+                                    style={styles.commentInput}
+                                    value={editContent}
+                                    onChangeText={setEditContent}
+                                    placeholder="Chỉnh sửa bình luận..."
+                                    multiline
+                                />
+                                <View style={styles.replyActions}>
+                                    <TouchableOpacity onPress={() => selectImage(setEditImage)}>
+                                        <Ionicons name="image-outline" size={20} color="blue" />
+                                    </TouchableOpacity>
+                                    <IconButton
+                                        icon="check"
+                                        iconColor="#007BFF"
+                                        size={30}
+                                        onPress={() => {
+                                            handleCommentEdit(comment.id, editContent, editImage);
+                                            setIsEditing(false);
+                                        }}
+                                    />
+                                    <IconButton
+                                        icon="close"
+                                        iconColor="red"
+                                        size={30}
+                                        onPress={() => setIsEditing(false)}
+                                    />
+                                </View>
+                                {editImage && (
+                                    <View style={styles.selectedImageContainer}>
+                                        <Image source={{ uri: getValidImageUrl(editImage) }} style={styles.selectedImage} />
+                                        <TouchableOpacity onPress={() => setEditImage(null)}>
+                                            <Ionicons name="close-circle" size={24} color="red" />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
+                        ) : (
+                            <View style={{ flexDirection: 'row', width: '100%' }}>
+                                <Text style={styles.commentText}>{comment.content}</Text>
+                            </View>
+                        )}
+                        {comment.image && !isEditing && (
                             <Image source={{ uri: getValidImageUrl(comment.image) }} style={styles.commentImage} />
                         )}
                     </View>
-                    {depth < MAX_REPLY_DEPTH && (
-                        <TouchableOpacity onPress={() => changeReplyingTo(comment.id)}>
-                            <Text style={styles.replyButton}>Trả lời</Text>
-                        </TouchableOpacity>
+
+                    <View style={styles.deleteAndEditContainer}>
+                    {!commentsLocked && (
+                        <View>
+                        {depth < MAX_REPLY_DEPTH && (
+                            <TouchableOpacity onPress={() => changeReplyingTo(comment.id)}>
+                                <Text style={styles.replyButton}>Trả lời</Text>
+                            </TouchableOpacity>
+                        )}
+                        </View>
                     )}
+                        <Text style={styles.commentTime}>{moment(comment.created_date).fromNow()}</Text>
+                    </View>
 
                     {replyingTo === comment.id && (
                         <View>
@@ -191,6 +307,40 @@ const PostDetailScreen = ({ route }) => {
         }
     };
 
+    const handleCommentDelete = async (commentId) => {
+        Alert.alert(
+            "Xác nhận xóa",
+            "Bạn có chắc chắn muốn xóa bình luận này?",
+            [
+                {
+                    text: "Hủy",
+                    style: "cancel"
+                },
+                {
+                    text: "Xóa",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const response = await authApis(token).delete(endpoints['comment-detail'](commentId));
+                            const data = await getPostComments(post.id);
+                            setComments(buildCommentTree(data));
+                            if (onCommentAdded) {
+                                onCommentAdded(data.length);
+                            }
+                            Alert.alert("Bình luận", "Xóa bình luận thành công!");
+                        } catch (error) {
+                            console.error(error);
+                            Alert.alert("Bình luận", "Không thể xóa bình luận. Vui lòng thử lại.");
+                        }
+                    }
+                }
+            ]
+        )
+
+    };
+
+
+
     const handleReply = async (commentId) => {
         try {
             const content = replyContentRef.current.trim();
@@ -257,6 +407,11 @@ const PostDetailScreen = ({ route }) => {
                                     <Text style={{ color: '#007BFF' }}>Tiến hành khảo sát</Text>
                                 </TouchableOpacity>
                             )}
+                            {(user.role === 0 || user.id === post.user.id) && (
+                                <TouchableOpacity onPress={handleToggleCommentsLock} style={{ marginLeft: 200 }}>
+                                    <Ionicons name={commentsLocked ? "lock-closed" : "lock-open"} size={24} color="red" />
+                                </TouchableOpacity>
+                            )}
                         </View>
                         <Text style={styles.content}>{post.content}</Text>
                         {post.images && post.images.length > 0 && (
@@ -271,21 +426,22 @@ const PostDetailScreen = ({ route }) => {
                             </View>
                         )}
                         <Text style={styles.commentTitle}>Bình luận</Text>
-                        <View style={styles.commentInputContainer}>
-                            <TextInput
-                                key={inputKey}
-                                style={styles.commentInput}
-                                defaultValue={commentContentRef.current}
-                                onChangeText={(text) => (commentContentRef.current = text)}
-                                placeholder="Viết bình luận..."
-                                multiline
-                            />
-
-                            <TouchableOpacity onPress={() => selectImage(setCommentImage)}>
-                                <Ionicons name="image-outline" size={24} color="blue" />
-                            </TouchableOpacity>
-                            <IconButton icon="send" iconColor="#007BFF" size={30} onPress={handleComment} />
-                        </View>
+                        {!commentsLocked && (
+                            <View style={styles.commentInputContainer}>
+                                <TextInput
+                                    key={inputKey}
+                                    style={styles.commentInput}
+                                    defaultValue={commentContentRef.current}
+                                    onChangeText={(text) => (commentContentRef.current = text)}
+                                    placeholder="Viết bình luận..."
+                                    multiline
+                                />
+                                <TouchableOpacity onPress={() => selectImage(setCommentImage)}>
+                                    <Ionicons name="image-outline" size={24} color="blue" />
+                                </TouchableOpacity>
+                                <IconButton icon="send" iconColor="#007BFF" size={30} onPress={handleComment} />
+                            </View>
+                        )}
                         {commentImage && (
                             <View style={styles.selectedImageContainer}>
                                 <Image source={{ uri: commentImage }} style={styles.selectedImage} />
@@ -304,7 +460,13 @@ const PostDetailScreen = ({ route }) => {
 };
 
 export const styles = StyleSheet.create({
-    commentContainer: { backgroundColor: '#eeee', borderRadius: 10, padding: 10 },
+    commentContainer: {
+        backgroundColor: '#eeee',
+        borderRadius: 10,
+        paddingBottom: 10,
+        paddingLeft: 10,
+        paddingRight: 10,
+    },
     container: {
         padding: 16,
         backgroundColor: "#fff",
@@ -379,13 +541,15 @@ export const styles = StyleSheet.create({
         marginBottom: 10,
     },
     commentTime: {
-        fontSize: 12,
+        fontSize: 14,
         color: "#888",
         marginTop: 5,
+        marginStart: 10,
     },
     replyButton: {
         color: "#007BFF",
         marginTop: 5,
+        fontSize: 14,
     },
     replyContainer: {
         flexDirection: "column",
@@ -447,6 +611,9 @@ export const styles = StyleSheet.create({
     sendButtonText: {
         color: '#fff',
         fontWeight: 'bold',
+    },
+    deleteAndEditContainer: {
+        flexDirection: 'row',
     },
 });
 
