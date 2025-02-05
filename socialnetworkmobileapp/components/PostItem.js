@@ -22,7 +22,7 @@ export const getValidImageUrl = (url) => {
     return url;
 };
 
-export const PostItem = ({ post, onPostDeleted }) => {
+export const PostItem = ({ post, onPostDeleted, onPostUpdated }) => {
     const cleanAvatarUrlAvatar = post.user.avatar.replace(/^image\/upload\//, "");
     const navigation = useNavigation();
     const user = useContext(MyUserContext);
@@ -104,11 +104,17 @@ export const PostItem = ({ post, onPostDeleted }) => {
                 </View>
                 {(user.role === 0 || user.id === post.user.id) && (
                     <>
-                            <IconButton
-                            icon="delete"
-                            color="red"
-                            size={20}
-                            onPress={() => onPostDeleted(post.id)}
+                        <IconButton
+                        icon="delete"
+                        color="red"
+                        size={20}
+                        onPress={() => onPostDeleted(post.id)}
+                        />
+                        <IconButton
+                        icon="lead-pencil"
+                        color="red"
+                        size={20}
+                        onPress={() => onPostUpdated(post.id)}
                         />
                     </>
                 )}

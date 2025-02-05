@@ -117,7 +117,7 @@ const CreatePostScreen = ({ route }) => {
 
                 if (response.status === 201) {
                     Alert.alert('Đăng bài thành công!');
-                    navigation.goBack();
+                    navigation.navigate('HomeScreen');
                 } else {
                     Alert.alert('Đăng bài không thành công');
                 }
@@ -165,7 +165,7 @@ const CreatePostScreen = ({ route }) => {
                 <Button style={styles.pickImagesButton} mode="outlined" onPress={pickImages}>Chọn ảnh</Button>
                 {user.role === 0 && (
                     <>
-                        <Button style={styles.createSurveyButton} mode="outlined" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions })}>Tạo khảo sát</Button>
+                        <Button style={styles.createSurveyButton} mode="outlined" onPress={() => navigation.navigate('CreateSurveyScreen', { surveyType, endTime, questions})}>Tạo khảo sát</Button>
                         <Button style={styles.createInvitationButton} mode="outlined">Tạo thư mời</Button>
                     </>
                 )}

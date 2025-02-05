@@ -4,6 +4,7 @@ import APIs, { authApis, endpoints } from "../../configs/APIs";
 import { ActivityIndicator, Searchbar } from "react-native-paper";
 import { PostItem } from "../PostItem";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
 
 const Home = () => {
     const [posts, setPosts] = React.useState([]);
@@ -13,6 +14,7 @@ const Home = () => {
     const [searchQuery, setSearchQuery] = React.useState("");
     const [hasMore, setHasMore] = useState(true);
     const [token, setToken] = React.useState(null);
+    const navigation = useNavigation()
 
     React.useEffect(() => {
         const fetchToken = async () => {
@@ -72,6 +74,10 @@ const Home = () => {
         );
     };
 
+    const handlePostUpdation = (postId) => {
+        navigation.navigate("UpdatePostScreen", { post: posts.find(post => post.id === postId), origin: "HomeScreen" })
+    }
+
 
     // Gọi API khi thay đổi page hoặc searchQuery
     useEffect(() => {
@@ -123,7 +129,7 @@ const Home = () => {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.listStyle}
                     keyExtractor={(item) => item.id.toString()}
-                    renderItem={({ item }) => <PostItem post={item} onPostDeleted={handlePostDeletion} />}
+                    renderItem={({ item }) => <PostItem post={item} onPostDeleted={handlePostDeletion} onPostUpdated={handlePostUpdation} />}
                     onEndReached={loadMore}
                     ListFooterComponent={loading && page > 1 ? <ActivityIndicator size="large" /> : null}
                     refreshing={refreshing}
