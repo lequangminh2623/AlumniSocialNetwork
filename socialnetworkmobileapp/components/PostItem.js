@@ -105,20 +105,20 @@ export const PostItem = ({ post, onPostDeleted, onPostUpdated }) => {
                     <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>
                 </View>
                 {(user.role === 0 || user.id === post.user.id) && (
-                    <>
                         <IconButton
                         icon="delete"
                         color="red"
                         size={20}
                         onPress={() => onPostDeleted(post.id)}
                         />
+                )}
+                {(user.id === post.user.id) && (
                         <IconButton
                         icon="lead-pencil"
                         color="red"
                         size={20}
                         onPress={() => onPostUpdated(post.id)}
                         />
-                    </>
                 )}
                 <View style={{flexDirection: 'column', marginLeft: 'auto'}}>
                 

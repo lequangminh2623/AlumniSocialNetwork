@@ -12,6 +12,8 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from sqlalchemy.sql.functions import current_user
+
 from .tasks import send_email_async
 
 from .models import Alumni, Teacher, Post, Comment, PostImage, SurveyPost, SurveyQuestion, SurveyOption, SurveyDraft, \
@@ -80,8 +82,11 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
     def get_queryset(self):
         query = self.queryset
         q = self.request.query_params.get("q")
+        current_user= self.request.query_params.get("current_user")
         if q:
             query = query.filter(content__icontains=q)
+        if current_user:
+            query = query.filter(user=current_user)
         return query
 
     @action(methods=['get'], url_path='my-posts', detail=False, permission_classes=[IsAuthenticated])
@@ -442,6 +447,7 @@ class SurveyPostViewSet(viewsets.ViewSet):
                 SurveyOption.objects.create(survey_question=question, **option_data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     def update(self, request, pk=None):
         self.permission_classes = [OwnerPermission]
         survey_post = get_object_or_404(SurveyPost, pk=pk, active=True)
@@ -452,7 +458,12 @@ class SurveyPostViewSet(viewsets.ViewSet):
         survey_type = request.data.get('survey_type', survey_post.survey_type)
         end_time = request.data.get('end_time', survey_post.end_time)
         questions_data = request.data.get('questions', [])
-        questions_data = json.loads(questions_data)
+
+        if isinstance(questions_data, str):
+            questions_data = json.loads(questions_data)
+
+        if not isinstance(questions_data, list):
+            questions_data = []
 
         survey_post.content = content
         survey_post.survey_type = survey_type
@@ -475,29 +486,36 @@ class SurveyPostViewSet(viewsets.ViewSet):
 
         for question_data in questions_data:
             options_data = question_data.pop('options', [])
-            question_id = int(question_data.get('id'))
-            if question_id and question_id in existing_questions:
-                question_instance = existing_questions[question_id]
+            question_id = question_data.get('id')
+            if question_id and int(question_id) in existing_questions:
+                question_instance = existing_questions[int(question_id)]
                 for attr, value in question_data.items():
                     setattr(question_instance, attr, value)
                 question_instance.save()
                 existing_options = {o.id: o for o in question_instance.options.all()}
                 option_ids = [int(o.get('id')) for o in options_data if o.get('id')]
                 for option_data in options_data:
-                    option_id = int(option_data.get('id'))
-                    if option_id and option_id in existing_options:
-                        option_instance = existing_options[option_id]
+                    option_id = option_data.get('id')
+                    if option_id and int(option_id) in existing_options:
+                        option_instance = existing_options[int(option_id)]
                         for attr, value in option_data.items():
                             setattr(option_instance, attr, value)
                         option_instance.save()
                     else:
-                        del option_data['id']
+                        if 'id' in option_data:
+                            del option_data['id']
                         SurveyOption.objects.create(survey_question=question_instance, **option_data)
                 options_to_delete = set(existing_options.keys()) - set(option_ids)
                 SurveyOption.objects.filter(id__in=options_to_delete).delete()
             else:
-                del questions_data['id']
-                SurveyQuestion.objects.create(survey_post=survey_post, **question_data)
+                if 'id' in question_data:
+                    del question_data['id']
+                new_question = SurveyQuestion.objects.create(survey_post=survey_post, **question_data)
+                for option_data in options_data:
+                    if 'id' in option_data:
+                        del option_data['id']
+                    SurveyOption.objects.create(survey_question=new_question, **option_data)
+
         questions_to_delete = set(existing_questions.keys()) - set(question_ids)
         SurveyQuestion.objects.filter(id__in=questions_to_delete).delete()
 
