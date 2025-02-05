@@ -26,6 +26,7 @@ export const endpoints = {
     'group': '/group/',
     'all-users':'/user/all-users/',
     'invitation': '/invitation/',
+    'my-posts': '/post/my-posts',
 }
 
 export const getPostComments = async (postId) => {

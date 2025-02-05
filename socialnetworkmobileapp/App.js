@@ -22,6 +22,7 @@ import Survey from './components/Survey';
 import CreateInvitation from './components/CreateInvitation';
 import UpdatePost from './components/UpdatePost';
 import UpdateSurvey from './components/UpdateSurvey';
+import TimeLine from './components/TimeLine/TimeLine';
 
 const Stack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
@@ -69,30 +70,51 @@ const AdminStackNavigator = () => {
         </Stack.Navigator>
     );
 };
-const ProfileStackNavigator = () => (
-    <Stack.Navigator>
-        <Stack.Screen name="UserProfileScreen" component={UserProfile} options={{ title: 'Tài khoản' }} />
-        <Stack.Screen name="ChangePasswordScreen" component={ChangePassword} options={{ title: 'Đổi mật khẩu' }} />
-    </Stack.Navigator>
-);
+
+
+const ProfileStackNavigator = () => {
+    return (
+        <Stack.Navigator>
+            <Stack.Screen name="UserProfileScreen" component={UserProfile} options={{ title: 'Tài khoản' }} />
+            <Stack.Screen name="ChangePasswordScreen" component={ChangePassword} options={{ title: 'Đổi mật khẩu' }} />
+        </Stack.Navigator>
+    );
+};
+
+const TimeLineStackNavigator = () => {
+    const navigation = useNavigation();
+
+    return (
+        <Stack.Navigator>
+            <Stack.Screen name="TimeLineScreen" component={TimeLine} options={{ title: 'Dòng thời gian' }} />
+            <Stack.Screen name="PostDetailScreen" component={PostDetailScreen} options={{ title: 'Bài viết'}} />
+            <Stack.Screen name="CreatePostScreen" component={CreatePostScreen} options={{ title: 'Tạo bài viết' }} />
+            <Stack.Screen name="CreateSurveyScreen" component={CreateSurvey} options={{ title: 'Tạo khảo sát' }}/>
+            <Stack.Screen name="SurveyScreen" component={Survey} options={{ title: 'Khảo sát' }}/>
+            <Stack.Screen name="UpdatePostScreen" component={UpdatePost} options={{ title: 'Chỉnh sửa bài viết' }} />
+            <Stack.Screen name="UpdateSurveyScreen" component={UpdateSurvey} options={{ title: 'Chỉnh sửa khảo sát' }}/>
+        </Stack.Navigator>
+    )
+};
 
 const TabNavigator = () => {
     const user = useContext(MyUserContext);
 
     return (
-        <Tab.Navigator>
+        <Tab.Navigator screenOptions={{ tabBarShowLabel: false }}>
             {user === null ? (
                 <>
-                <Tab.Screen name="LoginScreen" component={Login} options={{ title: 'Đăng nhập', tabBarIcon: ({ color, size }) => <Icon name="login" color={color} size={size} /> }} />
-                    <Tab.Screen name="RegisterScreen" component={Register} options={{ title: 'Đăng ký', tabBarIcon: ({ color, size }) => <Icon name="account-plus" color={color} size={size} /> }} />
+                <Tab.Screen name="LoginScreen" component={Login} options={{ title: 'Đăng nhập', tabBarIcon: ({ color, size }) => <Icon source="login" color={color} size={size} /> }} />
+                    <Tab.Screen name="RegisterScreen" component={Register} options={{ title: 'Đăng ký', tabBarIcon: ({ color, size }) => <Icon source="account-plus" color={color} size={size} /> }} />
                 </>
             ) : (
                 <>
-                    <Tab.Screen name="HomeStack" component={HomeStackNavigator} options={{ title: 'Trang chủ', tabBarIcon: ({ color, size }) => <Icon name="home" color={color} size={size} /> }} />
+                    <Tab.Screen name="HomeStack" component={HomeStackNavigator} options={{ tabBarIcon: ({ color, size }) => <Icon source="home" color={color} size={size} /> }} />
+                    <Tab.Screen name="TimeLineStack" component={TimeLineStackNavigator} options={{ title: 'Trang cá nhân', tabBarIcon: ({ color, size }) => <Icon source="newspaper-variant-multiple-outline" color={color} size={size} /> }} />
                     {user.role === 0 && (
-                        <Tab.Screen name="AdminStack" component={AdminStackNavigator} options={{ title: 'Quản trị', tabBarIcon: ({ color, size }) => <Icon name="account-check" color={color} size={size} /> }} />
+                        <Tab.Screen name="AdminStack" component={AdminStackNavigator} options={{ title: 'Quản trị', tabBarIcon: ({ color, size }) => <Icon source="shield-account" color={color} size={size} /> }} />
                     )}
-                    <Tab.Screen name="ProfileStack" component={ProfileStackNavigator} options={{ title: 'Tài khoản', tabBarIcon: ({ color, size }) => <Icon name="account" color={color} size={size} /> }} />
+                    <Tab.Screen name="ProfileStack" component={ProfileStackNavigator} options={{ title: 'Tài khoản', tabBarIcon: ({ color, size }) => <Icon source="account-cog" color={color} size={size} /> }} />
                 </>
             )}
         </Tab.Navigator>

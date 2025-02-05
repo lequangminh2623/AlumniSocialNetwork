@@ -26,7 +26,7 @@ const UpdatePost = ({ route }) => {
         if (route.params?.surveyType) setSurveyType(route.params.surveyType);
         if (route.params?.endTime) setEndTime(new Date(route.params.endTime));
         if (route.params?.questions) setQuestions(route.params.questions);
-        if (route.params?.post && route.params.origin === "HomeScreen") {
+        if (route.params?.post) {
             setContent(post.content);
             setImages(
                 post.images.map(img => {
@@ -37,7 +37,7 @@ const UpdatePost = ({ route }) => {
                     };
                 })
             )
-            if (post.object_type === "survey") {
+            if (post.object_type === "survey" && route.params.origin === "HomeScreen") {
                 const fetchSurvey = async () => {
                     const surveyData = await getSurveyData(post.id);
                     setSurveyType(surveyData.survey_type);
