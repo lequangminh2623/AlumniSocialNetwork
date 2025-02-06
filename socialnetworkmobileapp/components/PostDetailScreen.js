@@ -106,9 +106,9 @@ const PostDetailScreen = ({ route }) => {
     const handleToggleCommentsLock = async () => {
         try {
             const api = authApis(token);
-            await api.put(`/post/${post.id}/lock-unlock-comment/`);
+            await api.patch(`/post/${post.id}/lock-unlock-comment/`);
             setCommentsLocked(!commentsLocked);
-            navigation.navigate('HomeStack', { screen: 'HomeScreen' });
+            navigation.navigate("HomeStack", {screen: "HomeScreen"})
         } catch (error) {
             console.error("Error toggling comments lock:", error);
         }
@@ -136,6 +136,7 @@ const PostDetailScreen = ({ route }) => {
                                     color="red"
                                     size={18}
                                     onPress={() => handleCommentDelete(comment.id)}
+                                    style={{marginRight: -10}}
                                 />
                             )}
                             {(user.id === comment.user.id) && (

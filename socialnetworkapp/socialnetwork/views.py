@@ -10,6 +10,7 @@ from django.shortcuts import render
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -38,11 +39,19 @@ def index(request):
 class UserViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
-    @action(methods=['get'], url_path='all-users', detail=False, permission_classes=[AdminPermission])
+    class CustomPagination(PageNumberPagination):
+        page_size = 10
+
+    @action(methods=['get'], url_path='all-users', detail=False, permission_classes=[IsAuthenticated])
     def get_all_users(self, request):
-        users = User.objects.filter(is_active=True)
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        queryset = User.objects.filter(is_active=True)
+
+        paginator = self.CustomPagination()
+        paginated_queryset = paginator.paginate_queryset(queryset, request, view=self)
+
+        serializer = UserSerializer(paginated_queryset, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
 
     @action(methods=['get'], url_path='current', detail=False)
     def get_current_user(self, request):
@@ -218,7 +227,7 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         serializer = ReactionSerializer(reactions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(methods=['put'], url_path='lock-unlock-comment', detail=True,
+    @action(methods=['patch'], url_path='lock-unlock-comment', detail=True,
             permission_classes=[OwnerPermission, AdminPermission])
     def lock_unlock_comments(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk)

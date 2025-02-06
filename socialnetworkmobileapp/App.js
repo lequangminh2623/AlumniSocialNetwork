@@ -24,6 +24,8 @@ import UpdatePost from './components/UpdatePost';
 import UpdateSurvey from './components/UpdateSurvey';
 import TimeLine from './components/TimeLine/TimeLine';
 import { View } from 'react-native';
+import UsersList from './components/Chat/UserList';
+import Chat from './components/Chat/chat';
 
 const Stack = createNativeStackNavigator();
 const Tab = createMaterialTopTabNavigator();
@@ -90,6 +92,15 @@ const ProfileStackNavigator = () => {
     );
 };
 
+const ChatStackNavigator = () => {
+    return (
+        <Stack.Navigator>
+            <Stack.Screen name="UserListScreen" component={UsersList} options={{ title: 'Chọn tin nhắn', headerBackVisible: false }} />
+            <Stack.Screen name="ChatScreen" component={Chat} options={{ title: 'Tin nhắn' }} />
+        </Stack.Navigator>
+    );
+};
+
 const TabNavigator = () => {
     const user = useContext(MyUserContext);
 
@@ -103,6 +114,7 @@ const TabNavigator = () => {
             ) : (
                 <>
                     <Tab.Screen name="HomeStack" component={HomeStackNavigator} options={{ tabBarIcon: ({ color, size }) => <Icon source="home" color={color} size={size} /> }} />
+                    <Tab.Screen name="ChatStack" component={ChatStackNavigator} options={{ title: 'Chat', tabBarIcon: ({ color, size }) => <Icon source="message" color={color} size={size} /> }} />
                     {user.role === 0 && (
                         <Tab.Screen name="AdminStack" component={AdminStackNavigator} options={{ title: 'Quản trị', tabBarIcon: ({ color, size }) => <Icon source="shield-account" color={color} size={size} /> }} />
                     )}
