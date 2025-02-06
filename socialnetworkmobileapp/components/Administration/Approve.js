@@ -1,251 +1,254 @@
-import React, { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, FlatList, ActivityIndicator, Alert, StyleSheet, Image } from 'react-native';
-import { Text, Checkbox, Button, Searchbar } from 'react-native-paper';
-import { authApis, endpoints } from '../../configs/APIs';
-import { getValidImageUrl } from '../PostItem';
+import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { View, FlatList, ActivityIndicator, Alert, RefreshControl, StyleSheet, Image } from "react-native";
+import { Text, Checkbox, Button, Searchbar } from "react-native-paper";
+import { authApis, endpoints } from "../../configs/APIs";
+import { getValidImageUrl } from "../PostItem";
 
-const ResetTimer = () => {
-  const [loading, setLoading] = useState(true);
-  const [teachers, setTeachers] = useState([]);
-  const [token, setToken] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [selectedTeachers, setSelectedTeachers] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+const Approve = () => {
+    const [unverifiedAlumni, setUnverifiedAlumni] = useState([]);
+    const [selectedAlumni, setSelectedAlumni] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [searchQuery, setSearchQuery] = useState("");
 
-  const onChangeSearch = (query) => {
-    setSearchQuery(query);
-    setPage(1);
-    setTeachers([]);
-    setHasMore(true);
-    setLoading(true);
-  };
 
-  const toggleSelectTeacher = (id) => {
-    setSelectedTeachers((prevSelected) =>
-      prevSelected.includes(id)
-        ? prevSelected.filter((teacherId) => teacherId !== id)
-        : [...prevSelected, id]
-    );
-  };
+    const loadUnverifiedAlumni = async () => {
+        if (page > 0) {
+            setLoading(true);
+            try {
+                let url = `${endpoints['unverified-alumni']}?page=${page}`;
+                if (searchQuery) url = `${url}&q=${q}`;
+                const token = await AsyncStorage.getItem("token");
+                const res = await authApis(token).get(url);
+                setUnverifiedAlumni(page > 1 ? [...unverifiedAlumni, ...res.data.results] : res.data.results);
+                if (res.data.next === null) setPage(0);
+            } catch (error) {
+                console.error(error);
+                Alert.alert("Lỗi", "Không thể tải danh sách cựu sinh viên chưa được duyệt.");
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
 
-  const fetchToken = async () => {
-    try {
-      const storedToken = await AsyncStorage.getItem('token');
-      setToken(storedToken);
-    } catch (error) {
-      console.error('Failed to fetch token:', error);
-    }
-  };
+    useEffect(() => {
+        let timer = setTimeout(() => loadUnverifiedAlumni(), 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery, page]);
 
-  useEffect(() => {
-    fetchToken();
-  }, []);
 
-  const fetchExpiredPasswordTeachers = async () => {
-    if (!token) return;
-    try {
-      const response = await authApis(token).get(endpoints['expired-teacher'], {
-        params: { page, search: searchQuery },
-      });
-      if (page === 1) {
-        setTeachers(response.data.results);
-      } else {
-        setTeachers((prev) => [...prev, ...response.data.results]);
-      }
-      setHasMore(response.data.next !== null);
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Lỗi', 'Không thể tải danh sách giáo viên.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const loadMore = () => {
+        if (page > 0 && !loading) {
+            setPage(page + 1)
+        };
+    };
 
-  useEffect(() => {
-    fetchExpiredPasswordTeachers();
-  }, [token, page, searchQuery]);
+    const search = (value, callback) => {
+        setPage(1);
+        callback(value);
+    };
 
-  const loadMore = () => {
-    if (hasMore && !loading) {
-      setPage((prev) => prev + 1);
-    }
-  };
+    const refresh = () => {
+        setPage(1);
+        loadUnverifiedAlumni();
+    };
 
-  const selectAll = () => {
-    if (selectedTeachers.length === teachers.length) {
-      setSelectedTeachers([]);
-    } else {
-      setSelectedTeachers(teachers.map((teacher) => teacher.id));
-    }
-  };
+    const toggleSelectAlumni = (id) => {
+        setSelectedAlumni((prevSelected) =>
+            prevSelected.includes(id)
+                ? prevSelected.filter((alumniId) => alumniId !== id)
+                : [...prevSelected, id]
+        );
+    };
 
-  const confirmBulkReset = () => {
-    Alert.alert(
-      'Xác nhận',
-      `Bạn có chắc chắn muốn đặt lại mật khẩu cho ${selectedTeachers.length} giáo viên đã chọn?`,
-      [
-        { text: 'Hủy', style: 'cancel' },
-        { text: 'Đồng ý', onPress: handleBulkReset },
-      ]
-    );
-  };
+    const selectAll = () => {
+        if (selectedAlumni.length === unverifiedAlumni.length) {
+            setSelectedAlumni([]);
+        } else {
+            setSelectedAlumni(unverifiedAlumni.map((alumni) => alumni.id));
+        }
+    };
 
-  const handleBulkReset = async () => {
-    setActionLoading(true);
-    try {
-      await authApis(token).post(endpoints['reset-password-teacher-bulk'], {
-        pks: selectedTeachers,
-      });
-      setSelectedTeachers([]);
-      Alert.alert('Thành công', 'Đã đặt lại mật khẩu cho các giáo viên được chọn.');
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Lỗi', 'Không thể đặt lại mật khẩu. Vui lòng thử lại.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
+    const confirmBulkApprove = () => {
+        Alert.alert(
+            "Xác nhận",
+            `Bạn có chắc chắn muốn duyệt ${selectedAlumni.length} cựu sinh viên đã chọn?`,
+            [
+                { text: "Hủy", style: "cancel" },
+                { text: "Đồng ý", onPress: handleBulkApprove },
+            ]
+        );
+    };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.listItem}>
-      <Checkbox
-        status={selectedTeachers.includes(item.id) ? 'checked' : 'unchecked'}
-        onPress={() => toggleSelectTeacher(item.id)}
-      />
-      <Image
-        source={{ uri: getValidImageUrl(item.user.avatar) }}
-        style={styles.avatar}
-      />
-      <View style={styles.textContainer}>
-        <Text style={styles.title}>{`${item.user.last_name} ${item.user.first_name}`}</Text>
-        <Text style={styles.description}>{`Email: ${item.user.email}`}</Text>
-      </View>
-    </View>
-  );
+    const handleBulkApprove = async () => {
+        setLoading(true);
+        try {
+            const token = await AsyncStorage.getItem("token");
+            await authApis(token).post(endpoints['approve-alumni-bulk'], {
+                pks: selectedAlumni,
+            });
+            setSelectedAlumni([]);
+            Alert.alert("Thành công", "Đã duyệt các cựu sinh viên được chọn.");
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Lỗi", "Không thể duyệt cựu sinh viên. Vui lòng thử lại.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  return (
-    <View style={styles.container}>
-      {actionLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#0000ff" />
+    const confirmBulkDelete = () => {
+        Alert.alert(
+            "Xác nhận",
+            `Bạn có chắc chắn muốn xóa ${selectedAlumni.length} cựu sinh viên đã chọn?`,
+            [
+                { text: "Hủy", style: "cancel" },
+                { text: "Đồng ý", onPress: handleBulkDelete },
+            ]
+        );
+    };
+
+    const handleBulkDelete = async () => {
+        setLoading(true);
+        try {
+            const token = await AsyncStorage.getItem("token");
+            await authApis(token).post(endpoints['reject-alumni-bulk'], {
+                pks: selectedAlumni,
+            });
+            setSelectedAlumni([]);
+            Alert.alert("Thành công", "Đã xóa các cựu sinh viên được chọn.");
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Lỗi", "Không thể xóa cựu sinh viên. Vui lòng thử lại.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const renderItem = ({ item }) => (
+        <View style={styles.listItem}>
+            <Checkbox
+                status={selectedAlumni.includes(item.id) ? "checked" : "unchecked"}
+                onPress={() => toggleSelectAlumni(item.id)}
+            />
+            <Image
+                source={{ uri: getValidImageUrl(item.user.avatar) }}
+                style={styles.avatar}
+            />
+            <View style={styles.textContainer}>
+                <Text style={styles.title}>{`${item.user.last_name} ${item.user.first_name}`}</Text>
+                <Text style={styles.description}>{`Email: ${item.user.email}\nMã sinh viên: ${item.student_code}`}</Text>
+            </View>
         </View>
-      )}
-      <Searchbar
-        placeholder="Tìm kiếm giáo viên"
-        onChangeText={onChangeSearch}
-        value={searchQuery}
-      />
-      <View style={styles.buttonContainer}>
-        <Button onPress={selectAll} style={styles.selectAllButton}>
-          {selectedTeachers.length === teachers.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-        </Button>
-        <Button
-          mode="contained"
-          onPress={confirmBulkReset}
-          disabled={selectedTeachers.length === 0}
-          style={styles.bulkButton}
-        >
-          Đặt lại mật khẩu
-        </Button>
-      </View>
-      {loading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
+    );
+
+    return (
+        <View style={{ flex: 1 }}>
+            <Searchbar
+                placeholder="Tìm kiếm cựu sinh viên"
+                value={searchQuery}
+                onChangeText={t => search(t, setSearchQuery)}
+                style = {styles.searchBar}
+            />
+            <View style={styles.buttonContainer}>
+                <Button onPress={selectAll} style={styles.selectAllButton}>
+                    {selectedAlumni.length === unverifiedAlumni.length ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                </Button>
+                <View style={styles.bulkButtonContainer}>
+                    <Button
+                        mode="contained"
+                        onPress={confirmBulkApprove}
+                        disabled={selectedAlumni.length === 0}
+                        style={styles.bulkButton}
+                        buttonColor="#4CAF50"
+                    >
+                        Duyệt
+                    </Button>
+                    <Button
+                        mode="contained"
+                        onPress={confirmBulkDelete}
+                        disabled={selectedAlumni.length === 0}
+                        style={styles.bulkButton}
+                        buttonColor="#F44336"
+                    >
+                        Xóa
+                    </Button>
+                </View>
+            </View>
+            {unverifiedAlumni.length === 0 && !loading ? (
+                <Text style={styles.emptyText}>Không có kết quả tìm kiếm nào</Text>
+            ) : (
+                <>
+                    <FlatList
+                        data={unverifiedAlumni}
+                        renderItem={renderItem}
+                        keyExtractor={(item) => item.id.toString()}
+                        refreshControl={
+                            <RefreshControl refreshing={loading} onRefresh={refresh} />
+                        }
+                        onEndReached={loadMore}
+                    />
+                    {loading && <ActivityIndicator />}
+
+                </>
+            )}
         </View>
-      )}
-      {!loading && (
-        <FlatList
-          data={teachers}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>Không có giáo viên nào.</Text>
-          }
-          ListFooterComponent={
-            hasMore && (
-              <ActivityIndicator size="large" color="#0000ff" />
-            )
-          }
-        />
-      )}
-    </View>
-  );
+    );
 };
 
-export default ResetTimer;
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9f9f9',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  listItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    elevation: 2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 35,
-    marginRight: 16,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 4,
-  },
-  description: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    margin: 10,
-    justifyContent: 'space-between',
-  },
-  selectAllButton: {
-    flex: 1,
-    marginRight: 5,
-  },
-  bulkButton: {
-    flex: 1,
-    marginLeft: 5,
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#666',
-  },
+    listItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        margin: 10,
+        backgroundColor: "#fff",
+        borderRadius: 20,
+        elevation: 2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    avatar: {
+        width: 60,
+        height: 60,
+        borderRadius: 35,
+        marginRight: 16,
+    },
+    textContainer: {
+        flex: 1,
+    },
+    title: {
+        fontSize: 16,
+        fontWeight: "500",
+        color: "#333",
+        marginBottom: 4,
+    },
+    description: {
+        fontSize: 14,
+        color: "#666",
+    },
+    searchBar: {
+        margin: 10,
+    },
+    bulkButton: {
+        margin: 5,
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+    },
+    bulkButtonContainer: {
+        marginLeft: "auto",
+        flexDirection: 'row',
+    },
+    emptyText: {
+        textAlign: 'center',
+        marginTop: 20,
+        color: '#666',
+        fontSize: 18
+      },
 });
+
+export default Approve;

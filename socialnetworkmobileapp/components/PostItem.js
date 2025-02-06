@@ -78,9 +78,9 @@ export const PostItem = ({ post, onPostDeleted, onPostUpdated }) => {
         try {
             const token = await AsyncStorage.getItem("token");
             const api = authApis(token);
-            
+
             await api.post(endpoints.react(post.id));
-            
+
             await fetchPostData();
             setShowReactions(false);
         } catch (error) {
@@ -98,35 +98,40 @@ export const PostItem = ({ post, onPostDeleted, onPostUpdated }) => {
             <View style={styles.userInfo}>
                 <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.avatar} />
                 <View>
-                    {post.user.first_name || post.user.last_name?(
+                    {post.user.first_name || post.user.last_name ? (
                         <Text style={styles.username}>{post.user.first_name} {post.user.last_name}</Text>
-                    ):(<Text style={styles.username}>Quản Trị Viên</Text>)}
+                    ) : (<Text style={styles.username}>Quản Trị Viên</Text>)}
                     <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>
                 </View>
-                {(user.role === 0 || user.id === post.user.id) && (
-                        <IconButton
-                        icon="delete"
-                        color="red"
-                        size={20}
-                        onPress={() => onPostDeleted(post.id)}
-                        />
-                )}
-                {(user.id === post.user.id) && (
-                        <IconButton
-                        icon="lead-pencil"
-                        color="red"
-                        size={20}
-                        onPress={() => onPostUpdated(post.id)}
-                        />
-                )}
-                <View style={{flexDirection: 'column', marginLeft: 'auto'}}>
-                
-                <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: updateCommentCount })} />
-                {post.object_type === "survey" && (
-                    <TouchableOpacity onPress={() => navigation.navigate('SurveyScreen', { post: post })} style={{ flex: 1, alignItems: "flex-end" }}>
-                        <Text style={{color: '#007BFF'}}>Tiến hành khảo sát</Text>
-                    </TouchableOpacity>
-                )}
+                <View style={{ flexDirection: "row", flex: 1 }}>
+                    <View style={{ flexDirection: "row" }}>
+                        {(user.role === 0 || user.id === post.user.id) && (
+                            <IconButton
+                                icon="delete"
+                                color="red"
+                                size={20}
+                                onPress={() => onPostDeleted(post.id)}
+                                style={{ marginRight: -10 }}
+                            />
+                        )}
+                        {(user.id === post.user.id) && (
+                            <IconButton
+                                icon="lead-pencil"
+                                color="red"
+                                size={20}
+                                onPress={() => onPostUpdated(post.id)}
+                            />
+                        )}
+                    </View>
+
+                    <View style={{ flexDirection: 'column', marginLeft: 'auto' }}>
+                        <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: updateCommentCount })} />
+                        {post.object_type === "survey" && (
+                            <TouchableOpacity onPress={() => navigation.navigate('SurveyScreen', { post: post })} style={{ flex: 1, alignItems: "flex-end" }}>
+                                <Text style={{ color: '#007BFF' }}>Tiến hành khảo sát</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
             </View>
 
