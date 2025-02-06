@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, FlatList, ActivityIndicator, Alert, StyleSheet, Image } from 'react-native';
-import { Text, IconButton, List } from 'react-native-paper';
+import { Text, Checkbox, Button, Searchbar } from 'react-native-paper';
 import { authApis, endpoints } from '../../configs/APIs';
 import { getValidImageUrl } from '../PostItem';
 
@@ -12,6 +12,24 @@ const ResetTimer = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
+    const [selectedTeachers, setSelectedTeachers] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const onChangeSearch = (query) => {
+        setSearchQuery(query);
+        setPage(1);
+        setTeachers([]);
+        setHasMore(true);
+        setLoading(true);
+    };
+
+    const toggleSelectTeacher = (id) => {
+        setSelectedTeachers((prevSelected) =>
+            prevSelected.includes(id)
+                ? prevSelected.filter((teacherId) => teacherId !== id)
+                : [...prevSelected, id]
+        );
+    };
 
     useEffect(() => {
         const fetchToken = async () => {
@@ -27,30 +45,48 @@ const ResetTimer = () => {
             if (!token) return;
             try {
                 const response = await authApis(token).get(endpoints['expired-teacher'], {
-                    params: { page }
+                    params: { page, search: searchQuery },
                 });
-                setTeachers(prev => [...prev, ...response.data.results]);
-                console.info(response.data.results);
+                if (page === 1) {
+                    setTeachers(response.data.results);
+                } else {
+                    setTeachers((prev) => [...prev, ...response.data.results]);
+                }
                 setHasMore(response.data.next !== null);
             } catch (error) {
-                Alert.alert("Lỗi", "Không thể tải danh sách giáo viên có mật khẩu hết hạn.");
+                console.error(error);
+                Alert.alert('Lỗi', 'Không thể tải danh sách giáo viên.');
             } finally {
                 setLoading(false);
             }
         };
 
         fetchExpiredPasswordTeachers();
-    }, [token, page]);
+    }, [token, page, searchQuery]);
 
-    const handleReset = async (id) => {
+    const confirmBulkReset = () => {
+        Alert.alert(
+            'Xác nhận',
+            `Bạn có chắc chắn muốn đặt lại thời gian cho ${selectedTeachers.length} giáo viên đã chọn?`,
+            [
+                { text: 'Hủy', style: 'cancel' },
+                { text: 'Đồng ý', onPress: handleBulkReset },
+            ]
+        );
+    };
+
+    const handleBulkReset = async () => {
         setActionLoading(true);
         try {
-            await authApis(token).patch(endpoints['reset-teacher'](id));
-            setTeachers(teachers.filter(teacher => teacher.id !== id));
-            Alert.alert("Đặt lại thời gian", "Thời gian đổi mật khẩu của giáo viên đã được đặt lại.");
+            await authApis(token).patch(endpoints['reset-teacher-bulk'], { pks: selectedTeachers });
+            setTeachers((prevTeachers) =>
+                prevTeachers.filter((teacher) => !selectedTeachers.includes(teacher.id))
+            );
+            setSelectedTeachers([]);
+            Alert.alert('Thành công', 'Đã đặt lại thời gian cho các giáo viên được chọn.');
         } catch (error) {
             console.error(error);
-            Alert.alert("Đặt lại thời gian", "Không thể đặt lại thời gian đổi mật khẩu. Vui lòng thử lại.");
+            Alert.alert('Lỗi', 'Không thể đặt lại thời gian. Vui lòng thử lại.');
         } finally {
             setActionLoading(false);
         }
@@ -58,6 +94,10 @@ const ResetTimer = () => {
 
     const renderItem = ({ item }) => (
         <View style={styles.listItem}>
+            <Checkbox
+                status={selectedTeachers.includes(item.id) ? 'checked' : 'unchecked'}
+                onPress={() => toggleSelectTeacher(item.id)}
+            />
             <Image
                 source={{ uri: getValidImageUrl(item.user.avatar) }}
                 style={styles.avatar}
@@ -65,16 +105,6 @@ const ResetTimer = () => {
             <View style={styles.textContainer}>
                 <Text style={styles.title}>{`${item.user.last_name} ${item.user.first_name}`}</Text>
                 <Text style={styles.description}>{`Email: ${item.user.email}`}</Text>
-            </View>
-            <View style={styles.actionButtons}>
-                <IconButton
-                    icon="refresh"
-                    color="blue"
-                    size={20}
-                    onPress={() => handleReset(item.id)}
-                    disabled={actionLoading}
-                    style={styles.iconButton}
-                />
             </View>
         </View>
     );
@@ -100,12 +130,27 @@ const ResetTimer = () => {
                     <ActivityIndicator size="large" color="#0000ff" />
                 </View>
             )}
+            <Searchbar
+                placeholder="Tìm kiếm giáo viên..."
+                onChangeText={onChangeSearch}
+                value={searchQuery}
+                style={styles.searchBar}
+            />
+            <Button
+                mode="contained"
+                onPress={confirmBulkReset}
+                disabled={selectedTeachers.length === 0}
+                style={styles.bulkResetButton}
+            >
+                Đặt lại thời gian cho đã chọn
+            </Button>
             <FlatList
                 data={teachers}
                 renderItem={renderItem}
                 keyExtractor={item => item.id.toString()}
                 ListEmptyComponent={<Text>Không có giáo viên nào hết hạn đổi mật khẩu.</Text>}
                 onEndReached={loadMore}
+                onEndReachedThreshold={0.5}
                 ListFooterComponent={hasMore && <ActivityIndicator size="large" color="#0000ff" />}
             />
         </View>
@@ -152,14 +197,13 @@ const styles = StyleSheet.create({
     description: {
         fontSize: 14,
         color: '#666',
-        marginBottom: 2, // Space between description lines
+        marginBottom: 2,
     },
-    actionButtons: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    bulkResetButton: {
+        marginBottom: 16,
     },
-    iconButton: {
-        marginHorizontal: 4,
+    searchBar: {
+        marginBottom: 16,
     },
     loadingOverlay: {
         ...StyleSheet.absoluteFillObject,

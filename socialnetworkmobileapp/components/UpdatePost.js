@@ -14,8 +14,7 @@ const UpdatePost = ({ route }) => {
     const { post } = route.params;
     const user = useContext(MyUserContext);
     const navigation = useNavigation();
-
-    // Khởi tạo state với dữ liệu từ 'post'
+    const [loading, setLoading] = useState(false);
     const [content, setContent] = useState('');
     const [images, setImages] = useState([]);
     const [surveyType, setSurveyType] = useState('');
@@ -47,9 +46,8 @@ const UpdatePost = ({ route }) => {
                 fetchSurvey();
             }
         }
-    }, [route.params, post]);
+    }, [route.params]);
 
-    // Chọn ảnh từ thư viện
     const pickImages = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -58,18 +56,15 @@ const UpdatePost = ({ route }) => {
         });
 
         if (!result.canceled) {
-            // Kết hợp ảnh mới với ảnh hiện có
             const newImages = images.concat(result.assets);
             setImages(newImages);
         }
     };
 
-    // Xóa ảnh
     const deleteImage = (index) => {
         setImages(images.filter((_, i) => i !== index));
     };
 
-    // Lấy token từ AsyncStorage
     const getToken = async () => {
         try {
             const token = await AsyncStorage.getItem('token');
@@ -84,8 +79,8 @@ const UpdatePost = ({ route }) => {
         }
     };
 
-    // Gửi bài post đã cập nhật lên server
     const submitPost = async () => {
+        if(loading) return
         if (!content) {
             Alert.alert("Cập nhật bài viết", "Vui lòng nhập nội dung bài viết.");
             return;
@@ -96,7 +91,6 @@ const UpdatePost = ({ route }) => {
         const formData = new FormData();
         formData.append('content', content);
 
-        // Thêm ảnh vào formData
         images.forEach((image, index) => {
             formData.append('images', {
                 uri: image.uri,
@@ -110,12 +104,12 @@ const UpdatePost = ({ route }) => {
         const areQuestionsValid = Array.isArray(questions) && questions.length > 0 && questions.every(q => q.question !== '' && Array.isArray(q.options) && q.options.length > 0);
 
         if (isSurveyTypeValid && isEndTimeValid && areQuestionsValid) {
-
             formData.append('survey_type', surveyType);
             formData.append('end_time', endTime.toISOString());
             formData.append('questions', JSON.stringify(questions));
             console.info(formData);
             try {
+                setLoading(true);
                 const response = await axios.put(endpoints['survey-detail'](post.id), formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
@@ -131,10 +125,13 @@ const UpdatePost = ({ route }) => {
             } catch (error) {
                 console.error("Error submitting post:", error);
                 Alert.alert('Đã xảy ra lỗi. Vui lòng thử lại.');
+            } finally {
+                setLoading(false);
             }
         }
         else
             try {
+                setLoading(true);
                 const response = await axios.put(endpoints['post-detail'](post.id), formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
@@ -151,6 +148,8 @@ const UpdatePost = ({ route }) => {
             } catch (error) {
                 console.error("Error submitting post:", error);
                 Alert.alert('Đã xảy ra lỗi. Vui lòng thử lại.');
+            } finally {
+                setLoading(false);
             }
     };
 
@@ -196,7 +195,7 @@ const UpdatePost = ({ route }) => {
                         { post.object_type === 'invitation' && <Button style={styles.createInvitationButton} mode="outlined">Chỉnh sửa thư mời</Button>}
                     </>
                 )}
-                <Button style={styles.submitButton} mode="contained" onPress={submitPost}>Cập nhật bài viết</Button>
+                <Button style={styles.submitButton} loading={loading} mode="contained" onPress={submitPost}>Cập nhật bài viết</Button>
             </View>
         </View>
     );
