@@ -87,7 +87,7 @@ const TimeLine = () => {
     };
 
     const handlePostUpdation = (postId) => {
-        navigation.navigate("TimeLineStack", {screen: 'UpdatePostScreen', post: posts.find(post => post.id === postId), origin: "TimeLineScreen" })
+        navigation.navigate("UpdatePostScreen", { post: posts.find(post => post.id === postId), origin: "HomeScreen" })
     }
 
 
