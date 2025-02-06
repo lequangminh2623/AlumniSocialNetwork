@@ -322,7 +322,7 @@ class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     @action(methods=['get'], url_path='unverified', detail=False, permission_classes=[AdminPermission])
     def unverified_alumni(self, request):
-        queryset = self.queryset.filter(is_verified=False)
+        queryset = self.get_queryset().filter(is_verified=False)
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)

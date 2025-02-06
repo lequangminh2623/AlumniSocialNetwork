@@ -422,16 +422,18 @@ const PostDetailScreen = ({ route }) => {
                                 ) : (<Text style={styles.username}>Quản Trị Viên</Text>)}
                                 <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>
                             </View>
-                            {post.object_type === "survey" && (
-                                <TouchableOpacity onPress={() => navigation.navigate('SurveyScreen', { post: post })} style={{ flex: 1, alignItems: "flex-end" }}>
-                                    <Text style={{ color: '#007BFF' }}>Tiến hành khảo sát</Text>
-                                </TouchableOpacity>
-                            )}
-                            {(user.role === 0 || user.id === post.user.id) && (
-                                <TouchableOpacity onPress={handleToggleCommentsLock} style={{ marginLeft: 200 }}>
-                                    <Ionicons name={commentsLocked ? "lock-closed" : "lock-open"} size={24} color="red" />
-                                </TouchableOpacity>
-                            )}
+                            <View style={{flexDirection: 'column', flex: 1}}>
+                                {(user.role === 0 || user.id === post.user.id) && (
+                                    <TouchableOpacity onPress={handleToggleCommentsLock} style={{ marginLeft: 'auto' }}>
+                                        <Ionicons name={commentsLocked ? "lock-closed" : "lock-open"} size={24} color="red" />
+                                    </TouchableOpacity>
+                                )}
+                                {post.object_type === "survey" && (
+                                    <TouchableOpacity onPress={() => navigation.navigate('SurveyScreen', { post: post })} style={{ marginLeft: 'auto' }}>
+                                        <Text style={{ color: '#007BFF' }}>Tiến hành khảo sát</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
                         </View>
                         <Text style={styles.content}>{post.content}</Text>
                         {post.images && post.images.length > 0 && (

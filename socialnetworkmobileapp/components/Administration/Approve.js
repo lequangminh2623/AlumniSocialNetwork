@@ -10,7 +10,7 @@ const Approve = () => {
     const [selectedAlumni, setSelectedAlumni] = useState([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState('');
 
 
     const loadUnverifiedAlumni = async () => {
@@ -18,10 +18,14 @@ const Approve = () => {
             setLoading(true);
             try {
                 let url = `${endpoints['unverified-alumni']}?page=${page}`;
-                if (searchQuery) url = `${url}&q=${q}`;
+                if (searchQuery) url = `${url}&search=${searchQuery}`;
                 const token = await AsyncStorage.getItem("token");
                 const res = await authApis(token).get(url);
-                setUnverifiedAlumni(page > 1 ? [...unverifiedAlumni, ...res.data.results] : res.data.results);
+                if (page > 1) {
+                    setUnverifiedAlumni((prev) => [...prev, ...res.data.results]);
+                } else {
+                    setUnverifiedAlumni(res.data.results);
+                }
                 if (res.data.next === null) setPage(0);
             } catch (error) {
                 console.error(error);
