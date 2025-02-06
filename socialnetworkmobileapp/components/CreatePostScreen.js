@@ -32,7 +32,6 @@ const CreatePostScreen = ({ route }) => {
         
         if (route.params?.selectedUsers) setUserList(route.params.selectedUsers);
         if (route.params?.selectedGroups) setGroupList(route.params.selectedGroups);
-        console.log(route.params);
         if (route.params?.eventName) setEventName(route.params.eventName);
     }, [route.params]);
 
@@ -98,15 +97,11 @@ const CreatePostScreen = ({ route }) => {
         const isGroupListValid = groupList !== 0;
         const isEventNameValid = eventName.trim() !== '';
 
-        console.log(userList, groupList, eventName);
-        console.log(isUserListValid, isGroupListValid, isEventNameValid);
-
         if (isSurveyTypeValid && isEndTimeValid && areQuestionsValid) {
 
             formData.append('survey_type', surveyType);
             formData.append('end_time', endTime.toISOString());
             formData.append('questions', JSON.stringify(questions));
-            console.info(formData);
             try {
                 const response = await axios.post(endpoints['survey'], formData, {
                     headers: {

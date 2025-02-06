@@ -88,7 +88,6 @@ const CreateInvitation = ({ route }) => {
 
     const handleSubmitInvitation = () => {
         const isEventNameValid = eventName.trim() !== '';
-        console.log(selectedUsers, selectedGroups, eventName);
         if ((selectedUsers.length > 0 || selectedGroups.length > 0) && isEventNameValid) {
             navigation.navigate('CreatePostScreen', {
                 selectedUsers,

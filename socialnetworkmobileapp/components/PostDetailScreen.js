@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { IconButton } from "react-native-paper";
 import { MyUserContext } from "../configs/UserContexts";
 import { useNavigation } from "@react-navigation/native";
+import { set } from "lodash";
 
 moment.locale("vi");
 
@@ -47,6 +48,8 @@ const PostDetailScreen = ({ route }) => {
     const navigation = useNavigation()
     const cleanAvatarUrlAvatar = post.user.avatar.replace(/^image\/upload\//, "");
     const [commentsLocked, setCommentsLocked] = useState(post.lock_comment);
+
+    const [showReplies, setShowReplies] = useState({});
 
     const buildCommentTree = (comments) => {
         if (!Array.isArray(comments)) return [];
@@ -114,16 +117,30 @@ const PostDetailScreen = ({ route }) => {
         }
     };
 
+    const changeReplyingTo = (commentId) => {
+        if (replyingTo === commentId) {
+            setReplyingTo(null);
+        } else {
+            replyContentRef.current = "";
+            setReplyingTo(commentId);
+        }
+    };
+
+    const handleSeeMore = (commentId) => {
+        setShowReplies(prevState => ({
+            ...prevState,
+            [commentId]: !prevState[commentId]
+        }));
+    };
+
     const CommentItem = ({ comment, onReply, depth = 0 }) => {
         const [isEditing, setIsEditing] = useState(false);
         const [editContent, setEditContent] = useState(comment.content);
         const [editImage, setEditImage] = useState(comment.image);
-        
-        
 
         return (
             <View style={[styles.comment]}>
-                <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.commentAvatar} />
+                <Image source={{ uri: comment.user.avatar.replace(/^image\/upload\//, "") }} style={styles.commentAvatar} />
                 <View>
                     <View style={styles.commentContainer}>
                         <View style={styles.commentHeader}>
@@ -197,16 +214,21 @@ const PostDetailScreen = ({ route }) => {
                         )}
                     </View>
 
-                    <View style={styles.deleteAndEditContainer}>
-                    {!commentsLocked && (
-                        <View>
-                        {depth < MAX_REPLY_DEPTH && (
-                            <TouchableOpacity onPress={() => changeReplyingTo(comment.id)}>
-                                <Text style={styles.replyButton}>Trả lời</Text>
-                            </TouchableOpacity>
+                    <View style={styles.bottomComment}>
+                        {!commentsLocked && (
+                            <View style={styles.replyAndSeeMoreContainer}>
+                                {depth < MAX_REPLY_DEPTH && (
+                                    <TouchableOpacity onPress={() => changeReplyingTo(comment.id)}>
+                                        <Text style={styles.replyButton}>Trả lời</Text>
+                                    </TouchableOpacity>
+                                )}
+                                {comment.replies?.length > 0 && (
+                                    <TouchableOpacity onPress={() => handleSeeMore(comment.id)}>
+                                        <Text style={styles.seeMoreButton}>{showReplies[comment.id] ? "Ẩn bớt" : "Xem thêm"}</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
                         )}
-                        </View>
-                    )}
                         <Text style={styles.commentTime}>{moment(comment.created_date).fromNow()}</Text>
                     </View>
 
@@ -235,15 +257,17 @@ const PostDetailScreen = ({ route }) => {
                                     </TouchableOpacity>
                                 </View>
                             )}
+
                         </View>
                     )}
-                    {comment.replies?.length > 0 && (
+                    {showReplies[comment.id] && comment.replies?.length > 0 && (
                         <View style={styles.repliesContainer}>
                             {comment.replies.map(reply => (
                                 <CommentItem key={reply.id} comment={reply} onReply={onReply} depth={depth + 1} />
                             ))}
                         </View>
                     )}
+
                 </View>
             </View>
         );
@@ -267,11 +291,6 @@ const PostDetailScreen = ({ route }) => {
         fetchComments();
     }, [post.id]);
 
-
-    const changeReplyingTo = (commentId) => {
-        replyContentRef.current = ""
-        setReplyingTo(commentId)
-    }
 
     const handleComment = async () => {
         try {
@@ -613,8 +632,18 @@ export const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: 'bold',
     },
-    deleteAndEditContainer: {
+    bottomComment: {
         flexDirection: 'row',
+    },
+    seeMoreButton: {
+        color: "#007BFF",
+        marginLeft: 10,
+        marginTop: 5,
+        fontSize: 14,
+    },
+    replyAndSeeMoreContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
 });
 
