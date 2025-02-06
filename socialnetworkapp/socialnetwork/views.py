@@ -5,6 +5,7 @@ from encodings import search_function
 from django.db import IntegrityError
 from cloudinary.exceptions import Error
 from cloudinary.uploader import upload
+from django.db.models import Q
 from django.shortcuts import render
 from rest_framework import viewsets, generics, status
 from rest_framework.decorators import action
@@ -303,6 +304,13 @@ class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
     pagination_class = Pagination
     parser_classes = [JSONParser, MultiPartParser, ]
 
+    def get_queryset(self):
+        query = self.queryset
+        q = self.request.query_params.get("search")
+        if q:
+            query = query.filter(Q(user__first_name__icontains=q) | Q(user__last_name__icontains=q))
+        return query
+
     @action(methods=['get'], url_path='unverified', detail=False, permission_classes=[AdminPermission])
     def unverified_alumni(self, request):
         queryset = self.queryset.filter(is_verified=False)
@@ -313,48 +321,42 @@ class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
         serializer = self.serializer_class(queryset, many=True)
         return Response(serializer.data)
 
-    @action(methods=['patch'], url_path='approve', detail=True, permission_classes=[AdminPermission])
-    def approve_alumni(self, request, pk=None):
-        alumni = get_object_or_404(Alumni, pk=pk)
+    @action(methods=['patch'], url_path='approve', detail=False, permission_classes=[AdminPermission])
+    def approve_alumni_bulk(self, request):
+        pks = request.data.get('pks', [])
+        alumni_list = Alumni.objects.filter(pk__in=pks, is_verified=False)
 
-        if alumni.is_verified:
-            return Response({"error": "Tài khoản này đã được duyệt."}, status=status.HTTP_400_BAD_REQUEST)
+        for alumni in alumni_list:
+            alumni.is_verified = True
+            alumni.user.is_active = True
+            alumni.save(update_fields=['is_verified'])
+            alumni.user.save(update_fields=['is_active'])
 
-        alumni.is_verified = True
-        alumni.user.is_active = True
-        alumni.save(update_fields=['is_verified'])
-        alumni.user.save(update_fields=['is_active'])
+            send_email_async.delay(
+                subject='Thông báo duyệt tài khoản',
+                message=f"""
+                    Chào {alumni.user.first_name},
 
-        send_email_async.delay(
-            subject='Thông báo duyệt tài khoản',
-            message=f"""
-                Chào {alumni.user.first_name},
+                    Tài khoản cựu sinh viên của bạn đã được duyệt.
 
-                Tài khoản cựu sinh viên của bạn đã được duyệt.
-
-                Trân Trọng,
-                Đội ngũ Admin
-            """,
-            recipient_email=alumni.user.email,
-        )
-
-        return Response({"message": "Duyệt tài khoản thành công.", "alumni_id": alumni.id}, status=status.HTTP_200_OK)
-
-    @action(methods=['delete'], url_path='reject', detail=True, permission_classes=[AdminPermission])
-    def reject_alumni(self, request, pk=None):
-        alumni = get_object_or_404(Alumni, pk=pk)
-
-        if alumni.is_verified:
-            return Response(
-                {"error": "Tài khoản đã được duyệt, không thể từ chối yêu cầu."},
-                status=status.HTTP_400_BAD_REQUEST,
+                    Trân trọng,
+                    Đội ngũ Admin
+                """,
+                recipient_email=alumni.user.email,
             )
-        alumni.delete()
 
-        return Response(
-            {"message": f"Tài khoản ID {pk} đã bị từ chối."},
-            status=status.HTTP_200_OK,
-        )
+        return Response({"message": "Duyệt tài khoản thành công.", "alumni_ids": pks}, status=status.HTTP_200_OK)
+
+    @action(methods=['delete'], url_path='reject', detail=False, permission_classes=[AdminPermission])
+    def reject_alumni_bulk(self, request):
+        pks = request.data.get('pks', [])
+        alumni_list = Alumni.objects.filter(pk__in=pks, is_verified=False)
+
+        for alumni in alumni_list:
+            alumni.user.delete()
+            alumni.delete()
+
+        return Response({"message": "Đã từ chối các tài khoản.", "alumni_ids": pks}, status=status.HTTP_200_OK)
 
 
 class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -363,6 +365,13 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
     pagination_class = Pagination
     parser_classes = [JSONParser, MultiPartParser, ]
     permission_classes = [AdminPermission]
+
+    def get_queryset(self):
+        query = self.queryset
+        q = self.request.query_params.get("search")
+        if q:
+            query = query.filter(Q(user__first_name__icontains=q) | Q(user__last_name__icontains=q))
+        return query
 
     @action(methods=['get'], url_path='expired', detail=False)
     def expired_password_teachers(self, request):
@@ -377,33 +386,29 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
         serializer = self.get_serializer(expired_queryset, many=True)
         return Response(serializer.data)
 
-    @action(methods=['patch'], url_path='reset', detail=True)
-    def reset_password_time(self, request, pk=None):
-        teacher = get_object_or_404(Teacher, pk=pk)
+    @action(methods=['patch'], url_path='reset', detail=False)
+    def reset_password_time_bulk(self, request):
+        pks = request.data.get('pks', [])
+        teachers = Teacher.objects.filter(pk__in=pks)
 
-        if teacher.must_change_password == True and teacher.is_password_change_expired() == True:
-            teacher.unlock_account()
+        for teacher in teachers:
+            if teacher.must_change_password and teacher.is_password_change_expired():
+                teacher.unlock_account()
+                # Gửi email thông báo
+                send_email_async.delay(
+                    subject='Thông báo gia hạn thời gian đổi mật khẩu',
+                    message=f"""
+                        Chào {teacher.user.first_name},
 
-            # Gửi email thông báo
-            send_email_async.delay(
-                subject='Thông báo gia hạn thời gian đổi mật khẩu',
-                message=f"""
-                    Chào {teacher.user.first_name},
-            
-                    Tài khoản giảng viên của bạn đã được gia hạn thời gian đổi mật khẩu.
-            
-                    Trân Trọng,
-                    Đội ngũ Admin
-                """,
-                recipient_email=[teacher.user.email],
-            )
+                        Tài khoản giảng viên của bạn đã được gia hạn thời gian đổi mật khẩu.
 
-            return Response({"message": f"Thời gian đổi mật khẩu đã được đặt lại cho {teacher.user.username}."},
-                            status=status.HTTP_200_OK)
+                        Trân trọng,
+                        Đội ngũ Admin
+                    """,
+                    recipient_email=[teacher.user.email],
+                )
 
-        return Response(
-            {"message": f"Tài khoản {teacher.user.username} đã đổi mật khẩu hoặc chưa hết thời gian đổi mật khẩu."},
-            status=status.HTTP_400_BAD_REQUEST)
+        return Response({"message": "Đã đặt lại thời gian cho các giáo viên được chọn."}, status=status.HTTP_200_OK)
 
 
 class SurveyPostViewSet(viewsets.ViewSet):

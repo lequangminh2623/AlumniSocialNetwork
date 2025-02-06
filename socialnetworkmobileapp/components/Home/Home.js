@@ -38,8 +38,7 @@ const Home = () => {
             let res = await APIs.get(url);
             setPosts(prev => (page > 1 ? [...prev, ...res.data.results] : res.data.results));
 
-            if (res.data.next === null) 
-                setHasMore(false); // Đánh dấu không còn dữ liệu
+            setHasMore(res.data.next !== null);
         } catch (ex) {
             console.error(ex);
         } finally {
@@ -93,6 +92,7 @@ const Home = () => {
         try {
             let res = await APIs.get(`${endpoints['post']}?page=1&q=${searchQuery}`);
             setPosts(res.data.results);
+            setHasMore(res.data.next !== null);
         } catch (ex) {
             console.error(ex);
         } finally {
