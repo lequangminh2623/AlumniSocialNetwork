@@ -30,7 +30,6 @@ const ResetTimer = () => {
                     params: { page }
                 });
                 setTeachers(prev => [...prev, ...response.data.results]);
-                console.info(response.data.results);
                 setHasMore(response.data.next !== null);
             } catch (error) {
                 Alert.alert("Lỗi", "Không thể tải danh sách giáo viên có mật khẩu hết hạn.");

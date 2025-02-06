@@ -30,7 +30,6 @@ const Approve = () => {
                 const response = await authApis(token).get(endpoints['unverified-alumni'], {
                     params: { page }
                 });
-                console.info(response.data.results);
                 setUnverifiedAlumni(prev => [...prev, ...response.data.results]);
                 setHasMore(response.data.next !== null);
             } catch (error) {

@@ -114,7 +114,6 @@ const UpdatePost = ({ route }) => {
             formData.append('survey_type', surveyType);
             formData.append('end_time', endTime.toISOString());
             formData.append('questions', JSON.stringify(questions));
-            console.info(formData);
             try {
                 const response = await axios.put(endpoints['survey-detail'](post.id), formData, {
                     headers: {

@@ -69,8 +69,6 @@ const Login = () => {
             setTimeout(async () => {
                 const token = await AsyncStorage.getItem("token");
                 let user = await authApis(token).get(endpoints['current-user']);
-
-                console.info(user.data);
             
                 dispatch({ "type": "login", "payload": user.data });
 

@@ -65,7 +65,6 @@ export const PostItem = ({ post, onPostDeleted, onPostUpdated }) => {
         try {
             const token = await AsyncStorage.getItem("token");
             const api = authApis(token);
-            console.info(reactionId);
             await api.post(endpoints.react(post.id), { reaction: reactionId });
 
             await fetchPostData();
