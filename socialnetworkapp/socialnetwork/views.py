@@ -218,8 +218,8 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         serializer = ReactionSerializer(reactions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(methods=['patch'], url_path='lock-unlock-comment', detail=True,
-            permission_classes=[OwnerPermission])
+    @action(methods=['put'], url_path='lock-unlock-comment', detail=True,
+            permission_classes=[OwnerPermission, AdminPermission])
     def lock_unlock_comments(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk)
         self.check_object_permissions(request, post)
@@ -260,7 +260,7 @@ class CommentViewSet(viewsets.ViewSet):
         comment = get_object_or_404(Comment, id=pk, active=True)
         if comment.post.user == request.user or comment.user == request.user or request.user.role == 0:
             comment.soft_delete()
-            return Response({'message': 'Xóa bình luận thành công.'}, status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({'message': 'Bạn không có quyền xóa bình luận này.'}, status=status.HTTP_403_FORBIDDEN)
 
     @action(methods=['post'], detail=True, url_path='reply', permission_classes=[IsAuthenticated])

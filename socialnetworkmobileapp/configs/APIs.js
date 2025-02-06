@@ -13,6 +13,7 @@ export const endpoints = {
     'approve-alumni-bulk': '/alumni/approve/',
     'reject-alumni-bulk': '/alumni/reject/',
     'comments': (postId) => `/post/${postId}/comments/`,
+    'comment-detail': commentId => `/comment/${commentId}/`,
     'reacts': (postId) => `/post/${postId}/reacts/`,
     'teacher': '/teacher/',
     'expired-teacher': 'teacher/expired/',
@@ -27,6 +28,7 @@ export const endpoints = {
     'all-users':'/user/all-users/',
     'invitation': '/invitation/',
     'my-posts': '/post/my-posts',
+    'lock-unlock-comment': postId => `/post/${postId}/lock-unlock-comment/`,
 }
 
 export const getPostComments = async (postId) => {
