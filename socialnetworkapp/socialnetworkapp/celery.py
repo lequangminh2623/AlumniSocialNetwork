@@ -19,9 +19,9 @@ def debug_task(self):
 
 
 celery_app.conf.beat_schedule = {
-    'run-lock-account-after-1-days': {
+    'run-lock-account-every-minute': {
         'task': "socialnetwork.tasks.lock_expired_teacher_accounts",
-        'schedule': crontab(minute=0),
+        'schedule': crontab(minute='*'),
     },
     'delete-soft-deleted-records-every-day': {
         'task': 'socialnetwork.tasks.delete_permanently_after_30_days',

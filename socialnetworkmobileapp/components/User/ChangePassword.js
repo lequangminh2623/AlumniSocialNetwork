@@ -114,7 +114,7 @@ const ChangePassword = () => {
                         theme={{ roundness: 20 }}
                     />
                 ))}
-                <Button mode="contained-tonal" onPress={changePassword} loading={loading} style={styles.button}>
+                <Button mode="contained-tonal" onPress={changePassword} loading={loading} disabled={loading} style={styles.button}>
                     Đổi mật khẩu
                 </Button>
             </ScrollView>

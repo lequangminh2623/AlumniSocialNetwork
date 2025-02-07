@@ -196,6 +196,7 @@ const CreateAccount = () => {
                     style={styles.button}
                     icon="account-check"
                     mode="contained"
+                    disabled={loading}
                 >
                     Tạo tài khoản
                 </Button>

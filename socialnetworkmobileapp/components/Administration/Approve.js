@@ -89,7 +89,7 @@ const Approve = () => {
         setLoading(true);
         try {
             const token = await AsyncStorage.getItem("token");
-            await authApis(token).patch(endpoints['approve-alumni-bulk'], {
+            await authApis(token).post(endpoints['approve-alumni-bulk'], {
                 pks: selectedAlumni,
             });
             setUnverifiedAlumni((prevAlumni) =>
@@ -169,7 +169,7 @@ const Approve = () => {
                     <Button
                         mode="contained"
                         onPress={confirmBulkApprove}
-                        disabled={selectedAlumni.length === 0}
+                        disabled={selectedAlumni.length === 0 || loading}
                         style={styles.bulkButton}
                         buttonColor="#4CAF50"
                     >

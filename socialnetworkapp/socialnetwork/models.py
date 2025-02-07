@@ -74,9 +74,11 @@ class Teacher(BaseModel):
         return str(self.user)
 
     def is_password_change_expired(self):
-        if not self.password_reset_time:
-            return (timezone.now() - self.user.date_joined).total_seconds() > 60
-        return (timezone.now() - self.password_reset_time).total_seconds() > 60
+        if self.must_change_password:
+            if not self.password_reset_time:
+                return (timezone.now() - self.user.date_joined).total_seconds() > 60
+            return (timezone.now() - self.password_reset_time).total_seconds() > 60
+        return False
 
     def lock_account(self):
         self.user.is_active = False
@@ -87,6 +89,10 @@ class Teacher(BaseModel):
         self.user.is_active = True
         self.user.save()
         self.save()
+
+    def delete(self, *args, **kwargs):
+        self.user.delete()
+        super().delete(*args, **kwargs)
 
 
 class Post(BaseModel):
