@@ -1,24 +1,17 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import { View, Text, Image, FlatList, StyleSheet, TouchableOpacity, TextInput, Button, KeyboardAvoidingView, Platform, Alert } from "react-native";
-import { getPostComments, authApis, endpoints } from "../configs/APIs";
+import { View, Text, Image, FlatList, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import APIs, { getPostComments, authApis, endpoints } from "../configs/APIs";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import moment from "moment";
 import 'moment/locale/vi';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { IconButton } from "react-native-paper";
+import { ActivityIndicator, IconButton } from "react-native-paper";
 import { MyUserContext } from "../configs/UserContexts";
 import { useNavigation } from "@react-navigation/native";
-import { set } from "lodash";
-
+import { getValidImageUrl } from "./PostItem";
 moment.locale("vi");
 
-const getValidImageUrl = (url) => {
-    if (url.startsWith("image/upload/")) {
-        return url.replace(/^image\/upload\//, "");
-    }
-    return url;
-};
 
 const selectImage = async (setImage) => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -35,7 +28,9 @@ const selectImage = async (setImage) => {
 const MAX_REPLY_DEPTH = 3;
 
 const PostDetailScreen = ({ route }) => {
-    const { post, onCommentAdded } = route.params;
+    const { postId, onCommentAdded } = route.params;
+    const [post, setPost] = useState({});
+    const [loading, setLoading] = useState(true);
     const [comments, setComments] = useState([]);
     const commentContentRef = useRef("");
     const [inputKey, setInputKey] = useState(0);
@@ -46,10 +41,27 @@ const PostDetailScreen = ({ route }) => {
     const user = useContext(MyUserContext);
     const [token, setToken] = useState(null);
     const navigation = useNavigation()
-    const cleanAvatarUrlAvatar = post.user.avatar.replace(/^image\/upload\//, "");
-    const [commentsLocked, setCommentsLocked] = useState(post.lock_comment);
+    const [commentsLocked, setCommentsLocked] = useState(false);
 
     const [showReplies, setShowReplies] = useState({});
+
+    useEffect(() => {
+        const fetchPostDetails = async () => {
+            try {
+                const response = await APIs.get(endpoints['post-detail'](postId));
+                setPost(response.data);
+                setCommentsLocked(response.data.lock_comment);
+                const data = await getPostComments(postId);
+                setComments(buildCommentTree(data));
+            } catch (error) {
+                console.error("Error fetching post details:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPostDetails();
+    }, [postId]);
 
     const buildCommentTree = (comments) => {
         if (!Array.isArray(comments)) return [];
@@ -111,7 +123,6 @@ const PostDetailScreen = ({ route }) => {
             const api = authApis(token);
             await api.patch(`/post/${post.id}/lock-unlock-comment/`);
             setCommentsLocked(!commentsLocked);
-            navigation.navigate("HomeStack", {screen: "HomeScreen"})
         } catch (error) {
             console.error("Error toggling comments lock:", error);
         }
@@ -282,15 +293,6 @@ const PostDetailScreen = ({ route }) => {
         fetchToken();
     }, []);
 
-    useEffect(() => {
-        const fetchComments = async () => {
-            const data = await getPostComments(post.id);
-            setComments(buildCommentTree(data));
-        };
-
-        fetchComments();
-    }, [post.id]);
-
 
     const handleComment = async () => {
         try {
@@ -392,22 +394,23 @@ const PostDetailScreen = ({ route }) => {
             if (onCommentAdded) {
                 onCommentAdded(data.length);
             }
-
-            const updatedComments = await getPostComments(post.id);
-            setComments(buildCommentTree(updatedComments));
         } catch (error) {
             console.error("Error replying to comment:", error);
         }
     };
 
-
+    if (loading) {
+         return <ActivityIndicator />
+    }
 
     return (
         <KeyboardAvoidingView
             style={{ flex: 1 }}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={Platform.select({ ios: 60, android: 0 })}
         >
             <FlatList
+                keyboardShouldPersistTaps="handled"
                 style={styles.container}
                 contentContainerStyle={{ paddingBottom: 30 }}
                 data={comments}
@@ -415,9 +418,9 @@ const PostDetailScreen = ({ route }) => {
                 ListHeaderComponent={
                     <View>
                         <View style={styles.post}>
-                            <Image source={{ uri: cleanAvatarUrlAvatar }} style={styles.avatar} />
+                            <Image source={ {uri: getValidImageUrl(post.user.avatar) }} style={styles.avatar} />
                             <View>
-                                {post.user.first_name || post.user.last_name ? (
+                                {post.user?.first_name || post.user?.last_name ? (
                                     <Text style={styles.username}>{post.user.first_name} {post.user.last_name}</Text>
                                 ) : (<Text style={styles.username}>Quản Trị Viên</Text>)}
                                 <Text style={styles.postTime}>{moment(post.created_date).fromNow()}</Text>

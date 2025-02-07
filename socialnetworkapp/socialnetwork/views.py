@@ -157,13 +157,6 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         post.soft_delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(methods=['patch'], url_path='restore', detail=True, permission_classes=[OwnerPermission])
-    def restore_post(self, request, pk=None):
-        post = get_object_or_404(Post, pk=pk, active=True)
-        self.check_object_permissions(request, post)
-        post.restore()
-        return Response({'message': 'Bài viết đã được phục hồi thành công.'}, status=status.HTTP_200_OK)
-
     @action(methods=['post'], url_path='comment', detail=True, permission_classes=[IsAuthenticated])
     def create_comment(self, request, pk=None):
         post = get_object_or_404(Post, pk=pk, active=True)
@@ -227,10 +220,10 @@ class PostViewSet(viewsets.ViewSet, generics.RetrieveAPIView, generics.ListAPIVi
         serializer = ReactionSerializer(reactions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(methods=['patch'], url_path='lock-unlock-comment', detail=True,
-            permission_classes=[OwnerPermission, AdminPermission])
+    @action(methods=['patch'], url_path='lock-unlock-comment', detail=True)
     def lock_unlock_comments(self, request, pk=None):
-        post = get_object_or_404(Post, pk=pk)
+        post = get_object_or_404(Post, pk=pk, active=True)
+        self.permission_classes = [OwnerPermission | AdminPermission]
         self.check_object_permissions(request, post)
         post.lock_comment = not post.lock_comment
         post.save(update_fields=['lock_comment'])
@@ -414,7 +407,7 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
                         Trân trọng,
                         Đội ngũ Admin
                     """,
-                    recipient_email=[teacher.user.email],
+                    recipient_email=teacher.user.email,
                 )
 
         return Response({"message": "Đã đặt lại thời gian cho các giáo viên được chọn."}, status=status.HTTP_200_OK)
@@ -594,23 +587,19 @@ class SurveyPostViewSet(viewsets.ViewSet):
         if serializer.is_valid():
             serializer.save()
 
-            draft_url = 'link'
-
             send_email_async.delay(
                 subject='Nhắc nhở hoàn thành khảo sát',
                 message=f"""
                         Chào {request.user.first_name},
 
-                        Bạn đã lưu nháp một khảo sát. Vui lòng truy cập đường dẫn sau để tiếp tục:
+                        Bạn đã lưu nháp một khảo sát: {survey_post.content}
 
-                        {draft_url}
-
-                        Cảm ơn đã dành thời gian thực hiện khảo sát!
+                        Cảm ơn đã dành thời gian thực hiện!
 
                         Trân Trọng,
                         Đội ngũ Admin
                     """,
-                recipient_email=[request.user.email],
+                recipient_email=request.user.email,
             )
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -706,14 +695,36 @@ class InvitationPostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Ret
             for user_id in users:
                 user = get_object_or_404(User, id=user_id, is_active=True)
                 invitation_post.users.add(user)
-                self.send_invitation_email(user, invitation_post)
+                send_email_async.delay(
+                    subject=f"Lời mời tham gia sự kiện: {invitation_post.event_name}",
+                    message=f"""Xin chào,
+
+                                Bạn được mời tham gia sự kiện '{invitation_post.event_name}' trên nền tảng của chúng tôi.
+                                Nội dung sự kiện: {invitation_post.content}
+
+                                Trân trọng,
+                                Đội ngũ Admin.
+                            """,
+                    recipient_email=user.email
+                )
 
         if groups:
             for group_id in groups:
                 group = get_object_or_404(Group, id=group_id, active=True)
                 invitation_post.groups.add(group)
                 for user in group.users.filter(is_active=True):
-                    self.send_invitation_email(user, invitation_post)
+                    send_email_async.delay(
+                        subject=f"Lời mời tham gia sự kiện: {invitation_post.event_name}",
+                        message=f"""Xin chào,
+
+                                    Bạn được mời tham gia sự kiện '{invitation_post.event_name}' trên nền tảng của chúng tôi.
+                                    Nội dung sự kiện: {invitation_post.content}
+
+                                    Trân trọng,
+                                    Đội ngũ Admin.
+                                """,
+                        recipient_email=user.email
+                    )
 
         serializer = InvitationPostSerializer(invitation_post)
 
@@ -749,7 +760,18 @@ class InvitationPostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Ret
             for user_id in users:
                 user = get_object_or_404(User, id=user_id, is_active=True)
                 invitation_post.users.add(user)
-                self.send_invitation_email(user, invitation_post)
+                send_email_async.delay(
+                    subject=f"Lời mời tham gia sự kiện: {invitation_post.event_name}",
+                    message=f"""Xin chào,
+
+                                Bạn được mời tham gia sự kiện '{invitation_post.event_name}' trên nền tảng của chúng tôi.
+                                Nội dung sự kiện: {invitation_post.content}
+
+                                Trân trọng,
+                                Đội ngũ Admin.
+                            """,
+                    recipient_email=user.email
+                )
             invitation_post.save()
 
         invitation_post.groups.clear()
@@ -758,22 +780,22 @@ class InvitationPostViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Ret
                 group = get_object_or_404(Group, id=group_id, active=True)
                 invitation_post.groups.add(group)
                 for user in group.users.filter(is_active=True):
-                    self.send_invitation_email(user, invitation_post)
+                    send_email_async.delay(
+                        subject=f"Lời mời tham gia sự kiện: {invitation_post.event_name}",
+                        message=f"""Xin chào,
+
+                                    Bạn được mời tham gia sự kiện '{invitation_post.event_name}' trên nền tảng của chúng tôi.
+                                    Nội dung sự kiện: {invitation_post.content}
+    
+                                    Trân trọng,
+                                    Đội ngũ Admin.
+                                """,
+                        recipient_email=user.email
+                    )
             invitation_post.save()
 
         serializer = InvitationPostSerializer(invitation_post)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def send_invitation_email(self, user, invitation_post):
-        subject = f"Lời mời tham gia sự kiện: {invitation_post.event_name}"
-        message = f"""Xin chào,
 
-                Bạn được mời tham gia sự kiện '{invitation_post.event_name}' trên nền tảng của chúng tôi.
-                Nội dung sự kiện: {invitation_post.content}
 
-                Trân trọng,
-                Đội ngũ Admin.
-        """
-        recipient_email = [user.email]
-
-        send_email_async.delay(subject, message, recipient_email)

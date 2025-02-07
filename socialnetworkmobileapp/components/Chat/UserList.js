@@ -6,7 +6,6 @@ import { MyUserContext } from '../../configs/UserContexts';
 import { getValidImageUrl } from '../PostItem';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import { SearchBar } from 'react-native-screens';
 import { Searchbar } from 'react-native-paper';
 
 const UsersList = ({ navigation }) => {

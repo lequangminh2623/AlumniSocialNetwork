@@ -32,6 +32,8 @@ class Role(IntEnum):
     ALUMNI = 1
     TEACHER = 2
 
+
+
     @classmethod
     def choices(cls):
         return [(role.value, role.name.capitalize()) for role in cls]
@@ -46,6 +48,9 @@ class User(AbstractUser):
         choices=Role.choices(),
         default=Role.ADMIN.value
     )
+
+    class Meta:
+        ordering = ['id']
 
 class Alumni(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -70,8 +75,8 @@ class Teacher(BaseModel):
 
     def is_password_change_expired(self):
         if not self.password_reset_time:
-            return (timezone.now() - self.user.date_joined).total_seconds() > 1
-        return (timezone.now() - self.password_reset_time).total_seconds() > 1
+            return (timezone.now() - self.user.date_joined).total_seconds() > 60
+        return (timezone.now() - self.password_reset_time).total_seconds() > 60
 
     def lock_account(self):
         self.user.is_active = False
@@ -132,10 +137,6 @@ class SurveyQuestion(models.Model):
     def clean(self):
         if self.options.count() < 2:
             raise ValidationError("Each question must have at least 2 options.")
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.question

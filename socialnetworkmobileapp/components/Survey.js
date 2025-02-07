@@ -6,6 +6,7 @@ import { getValidImageUrl } from "./PostItem";
 import moment from "moment";
 import 'moment/locale/vi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
 
 moment.locale("vi");
 
@@ -22,6 +23,7 @@ const Survey = ({ route }) => {
     const [selectedOptions, setSelectedOptions] = useState({});
     const [token, setToken] = useState(null);
     const [hasCompleted, setHasCompleted] = useState(false)
+    const navigation = useNavigation()
 
     useEffect(() => {
         const fetchToken = async () => {
@@ -94,6 +96,7 @@ const Survey = ({ route }) => {
             });
             if (response.status === 201 || response.status === 200) {
                 Alert.alert('Kháo sát' ,'Khảo sát được lưu nháp thành công!');
+                navigation.navigate("HomeStack", {screen: "HomeScreen"})
             } else {
                 Alert.alert('Khảo sát' ,'Bạn không có quyền lưu nháp khảo sát này hoặc đã hồi đáp trước đó.');
             }
@@ -119,6 +122,7 @@ const Survey = ({ route }) => {
             });
             if (response.status === 201) {
                 Alert.alert('Kháo sát' ,'Khảo sát được gửi thành công!');
+                navigation.navigate("HomeStack", {screen: "HomeScreen"})
             } else {
                 Alert.alert('Khảo sát' ,'Bạn không có quyền trả lời khảo sát này hoặc đã hồi đáp trước đó.');
             }

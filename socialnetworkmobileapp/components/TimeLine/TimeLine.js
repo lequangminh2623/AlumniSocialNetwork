@@ -26,7 +26,7 @@ const TimeLine = () => {
     const [searchQuery, setSearchQuery] = React.useState("");
     const [hasMore, setHasMore] = useState(true);
     const [token, setToken] = React.useState(null);
-    const currentUser  = useContext(MyUserContext);
+    const currentUser = useContext(MyUserContext);
     const navigation = useNavigation();
     React.useEffect(() => {
         const fetchToken = async () => {
@@ -44,13 +44,13 @@ const TimeLine = () => {
         setLoading(true);
         try {
             let url = `${endpoints['post']}?page=${page}&current_user=${currentUser.id}`;
-            if (searchQuery) 
+            if (searchQuery)
                 url += `&q=${searchQuery}`;
 
             let res = await APIs.get(url);
             setPosts(prev => (page > 1 ? [...prev, ...res.data.results] : res.data.results));
 
-            if (res.data.next === null) 
+            if (res.data.next === null)
                 setHasMore(false); // Đánh dấu không còn dữ liệu
         } catch (ex) {
             console.error(ex);
@@ -61,8 +61,8 @@ const TimeLine = () => {
 
     const handlePostDeletion = (postId) => {
         Alert.alert(
-            "Xác nhận xóa", 
-            "Bạn có chắc chắn muốn xóa bài viết này?", 
+            "Xác nhận xóa",
+            "Bạn có chắc chắn muốn xóa bài viết này?",
             [
                 {
                     text: "Hủy",
@@ -121,25 +121,23 @@ const TimeLine = () => {
 
     // Load thêm dữ liệu khi cuộn đến cuối
     const loadMore = () => {
-        if (hasMore && !loading) 
+        if (hasMore && !loading)
             setPage(prev => prev + 1);
     };
 
     const renderHeader = () => {
         return (
             <View>
-                {/* Phần hiển thị ảnh cover */}
                 <View style={styles.coverContainer}>
-                    {currentUser.cover_photo ? (
+                    {currentUser.cover ? (
                         <Image
-                            source={{ uri: getValidImageUrl(currentUser.cover_photo) }}
+                            source={{ uri: getValidImageUrl(currentUser.cover) }}
                             style={styles.coverImage}
                         />
                     ) : (
                         <View style={styles.defaultCover}></View>
                     )}
                 </View>
-                {/* Hiển thị ảnh avatar và họ tên */}
                 <View style={styles.avatarNameContainer}>
                     <View style={styles.avatarContainer}>
                         <Image
@@ -164,7 +162,32 @@ const TimeLine = () => {
                 style={styles.searchBar}
             />
             {posts.length === 0 && !loading ? (
-                <Text style={styles.noPostsText}>Không có kết quả tìm kiếm nào</Text>
+                <>
+                    <View>
+                        <View style={styles.coverContainer}>
+                            {currentUser.cover ? (
+                                <Image
+                                    source={{ uri: getValidImageUrl(currentUser.cover) }}
+                                    style={styles.coverImage}
+                                />
+                            ) : (
+                                <View style={styles.defaultCover}></View>
+                            )}
+                        </View>
+                        <View style={styles.avatarNameContainer}>
+                            <View style={styles.avatarContainer}>
+                                <Image
+                                    source={{ uri: getValidImageUrl(currentUser.avatar) }}
+                                    style={styles.avatar}
+                                />
+                            </View>
+                            <Text style={styles.fullName}>
+                                {currentUser.first_name} {currentUser.last_name}
+                            </Text>
+                        </View>
+                    </View>
+                    <Text style={styles.noPostsText}>Không có kết quả tìm kiếm nào</Text>
+                </>
             ) : (
                 <FlatList
                     data={posts}
@@ -248,7 +271,7 @@ const styles = StyleSheet.create({
     },
     listStyle: {
         paddingBottom: 100,
-        
+
     },
     searchBar: {
         margin: 10,

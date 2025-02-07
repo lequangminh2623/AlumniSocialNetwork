@@ -184,7 +184,10 @@ const Register = () => {
     };
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === 'android' ? 'padding' : 'height'} style={styles.container}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={Platform.select({ ios: 60, android: 0 })}
+            style={styles.container}
+        >
             <View style={styles.view}>
                 <Text style={styles.title}>Hãy bắt đầu</Text>
                 <Text style={styles.title}>Bằng cách tạo một tài khoản!</Text>
@@ -229,7 +232,7 @@ const Register = () => {
                 <View style={styles.switch}>
                     <Text style={styles.switchText}>Đã có tài khoản?</Text>
                     <Pressable onPress={() => nav.navigate("LoginScreen")}>
-                        <Text style={[styles.switchText, {color: '#38559a', fontWeight: 'bold'}]}> Đăng nhập</Text>
+                        <Text style={[styles.switchText, { color: '#38559a', fontWeight: 'bold' }]}> Đăng nhập</Text>
                     </Pressable>
                 </View>
             </ScrollView>

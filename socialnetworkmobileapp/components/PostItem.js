@@ -125,7 +125,7 @@ export const PostItem = ({ post, onPostDeleted, onPostUpdated }) => {
                     </View>
 
                     <View style={{ flexDirection: 'column', marginLeft: 'auto' }}>
-                        <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: updateCommentCount })} />
+                        <FontAwesome name="ellipsis-h" size={hp(2.4)} color={theme.colors.text} style={styles.moreIcon} onPress={() => navigation.navigate("PostDetailScreen", { postId: post.id, onCommentAdded: updateCommentCount })} />
                         {post.object_type === "survey" && (
                             <TouchableOpacity onPress={() => navigation.navigate('SurveyScreen', { post: post })} style={{ flex: 1, alignItems: "flex-end" }}>
                                 <Text style={{ color: '#007BFF' }}>Tiến hành khảo sát</Text>
@@ -191,7 +191,7 @@ export const PostItem = ({ post, onPostDeleted, onPostUpdated }) => {
                         )}
                     </View>
                 )}
-                <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { post, onCommentAdded: updateCommentCount })} />
+                <FontAwesome name="comment" size={18} color="#888" onPress={() => navigation.navigate("PostDetailScreen", { postId: post.id, onCommentAdded: updateCommentCount })} />
                 <Text style={styles.interactionText}>{commentCount}</Text>
             </View>
         </View>
