@@ -14,7 +14,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from sqlalchemy.sql.functions import current_user
+from django.core.cache import cache
 
 from .tasks import send_email_async
 
@@ -323,7 +323,7 @@ class AlumniViewSet(viewsets.ViewSet, generics.CreateAPIView):
         serializer = self.serializer_class(queryset, many=True)
         return Response(serializer.data)
 
-    @action(methods=['patch'], url_path='approve', detail=False, permission_classes=[AdminPermission])
+    @action(methods=['post'], url_path='approve', detail=False, permission_classes=[AdminPermission])
     def approve_alumni_bulk(self, request):
         pks = request.data.get('pks', [])
         alumni_list = Alumni.objects.filter(pk__in=pks, is_verified=False)
@@ -377,8 +377,8 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     @action(methods=['get'], url_path='expired', detail=False)
     def expired_password_teachers(self, request):
-        queryset = self.get_queryset()  # Lấy tất cả đối tượng Teachers
-        expired_queryset = [teacher for teacher in queryset if teacher.is_password_change_expired()]  # Gọi hàm để lọc
+        queryset = self.get_queryset()
+        expired_queryset = [teacher for teacher in queryset if teacher.is_password_change_expired()]
         page = self.paginate_queryset(expired_queryset)
 
         if page is not None:
@@ -388,7 +388,7 @@ class TeacherViewSet(viewsets.ViewSet, generics.CreateAPIView):
         serializer = self.get_serializer(expired_queryset, many=True)
         return Response(serializer.data)
 
-    @action(methods=['patch'], url_path='reset', detail=False)
+    @action(methods=['post'], url_path='reset', detail=False)
     def reset_password_time_bulk(self, request):
         pks = request.data.get('pks', [])
         teachers = Teacher.objects.filter(pk__in=pks)

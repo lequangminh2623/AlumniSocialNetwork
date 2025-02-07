@@ -15,8 +15,8 @@ const ResetTimer = () => {
 
   const loadTeachers = async () => {
     if (page > 0) {
-      setLoading(true);
       try {
+        setLoading(true);
         let url = `${endpoints['expired-teacher']}?page=${page}`;
         if (searchQuery) url += `&search=${searchQuery}`;
         const token = await AsyncStorage.getItem('token');
@@ -84,19 +84,22 @@ const ResetTimer = () => {
   };
 
   const handleBulkReset = async () => {
-    setActionLoading(true);
     try {
+      setLoading(true);
       const token = await AsyncStorage.getItem('token');
-      await authApis(token).post(endpoints['reset-password-teacher-bulk'], {
+      await authApis(token).post(endpoints['reset-teacher-bulk'], {
         pks: selectedTeachers,
       });
+      setTeachers((prevTeacher) =>
+        prevTeacher.filter((teachers) => !selectedTeachers.includes(teachers.id))
+      );
       setSelectedTeachers([]);
       Alert.alert('Thành công', 'Đã đặt lại mật khẩu cho các giáo viên được chọn.');
     } catch (error) {
       console.error(error);
       Alert.alert('Lỗi', 'Không thể đặt lại mật khẩu. Vui lòng thử lại.');
     } finally {
-      setActionLoading(false);
+      setLoading(false);
     }
   };
 
@@ -131,13 +134,13 @@ const ResetTimer = () => {
         <Button
           mode="contained"
           onPress={confirmBulkReset}
-          disabled={selectedTeachers.length === 0}
+          disabled={selectedTeachers.length === 0 || loading}
           style={styles.bulkButton}
         >
           Đặt lại mật khẩu
         </Button>
       </View>
-      {teachers.length === 0 && page === 1 ? (
+      {teachers.length === 0 && !loading ? (
         <Text style={styles.emptyText}>Không có kết quả tìm kiếm nào</Text>
       ) : (
         <>

@@ -175,27 +175,28 @@ class TeacherSerializer(ModelSerializer):
         teacher = Teacher.objects.create(user=user, must_change_password=True)
         teacher.password_reset_time = timezone.now()
 
-        self.send_account_email(user, 'ou@123')
+        send_email_async.delay(
+            subject="Tài khoản giảng viên của bạn",
+            message=f"""
+                    Chào {user.first_name},
+
+                    Tài khoản giáo viên của bạn đã được tạo. Vui lòng sử dụng thông tin đăng nhập sau để đăng nhập:
+
+                    Tên đăng nhập: {user.username}
+                    Mật khẩu: {password}
+
+                    Bạn phải thay đổi mật khẩu trong vòng 24 giờ, nếu không tài khoản của bạn sẽ bị khóa.
+
+                    Trân Trọng,
+                    Đội ngũ Admin
+                    """,
+            recipient_email=user.email,
+        )
 
         return teacher
 
-    def send_account_email(self, user, password):
 
-        subject = "Tài khoản giảng viên của bạn"
-        message = f"""
-        Chào {user.first_name},
 
-        Tài khoản giáo viên của bạn đã được tạo. Vui lòng sử dụng thông tin đăng nhập sau để đăng nhập:
-
-        Tên đăng nhập: {user.username}
-        Mật khẩu: {password}
-
-        Bạn phải thay đổi mật khẩu trong vòng 24 giờ, nếu không tài khoản của bạn sẽ bị khóa.
-
-        Trân Trọng,
-        Đội ngũ Admin
-        """
-        send_email_async.delay(subject, message, [user.email])
 
 
 class SurveyOptionSerializer(serializers.ModelSerializer):

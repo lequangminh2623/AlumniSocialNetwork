@@ -114,6 +114,7 @@ const Login = () => {
                     style={styles.button}
                     icon="account-check"
                     mode="contained"
+                    disabled={loading}
                 >
                     Đăng nhập
                 </Button>
