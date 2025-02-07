@@ -154,7 +154,10 @@ const CreateAccount = () => {
     };
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === 'android' ? 'padding' : 'height'} style={styles.container}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={Platform.select({ ios: 60, android: 0 })}
+            style={styles.container}
+        >
             <View style={styles.view}>
                 <Text style={styles.title}>Điền thông tin</Text>
                 <Text style={styles.title}>Để tạo tài khoản giáo viên:</Text>

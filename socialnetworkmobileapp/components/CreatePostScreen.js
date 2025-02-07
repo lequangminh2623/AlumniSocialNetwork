@@ -22,6 +22,7 @@ const CreatePostScreen = ({ route }) => {
     const [groupList, setGroupList] = useState([]);
     const [eventName, setEventName] = useState("");
     const navigation = useNavigation();
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (route.params?.surveyType) setSurveyType(route.params.surveyType);
@@ -70,6 +71,7 @@ const CreatePostScreen = ({ route }) => {
 
     // Gửi bài post lên server
     const submitPost = async () => {
+        if(loading) return
         if (!content) {
             Alert.alert("Đăng bài", "Vui lòng nhập nội dung bài viết.");
             return;
@@ -103,6 +105,7 @@ const CreatePostScreen = ({ route }) => {
             formData.append('end_time', endTime.toISOString());
             formData.append('questions', JSON.stringify(questions));
             try {
+                setLoading(true)
                 const response = await axios.post(endpoints['survey'], formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
@@ -118,6 +121,8 @@ const CreatePostScreen = ({ route }) => {
             } catch (error) {
                 console.error("Error submitting post:", error);
                 Alert.alert('Đã xảy ra lỗi. Vui lòng thử lại.');
+            } finally {
+                setLoading(false)
             }
         }
         else if ((isUserListValid || isGroupListValid) && isEventNameValid) {
@@ -129,6 +134,7 @@ const CreatePostScreen = ({ route }) => {
             });
             formData.append('event_name', eventName);
             try {
+                setLoading(true)
                 const response = await axios.post(endpoints['invitation'], formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
@@ -145,9 +151,12 @@ const CreatePostScreen = ({ route }) => {
             } catch (error) {
                 console.error("Error submitting invitation:", error);
                 Alert.alert('Đã xảy ra lỗi. Vui lòng thử lại.');
+            } finally{
+                setLoading(false)
             }
         } else {
             try {
+                setLoading(true)
                 const response = await axios.post(endpoints.post, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
@@ -164,6 +173,8 @@ const CreatePostScreen = ({ route }) => {
             } catch (error) {
                 console.error("Error submitting post:", error);
                 Alert.alert('Đã xảy ra lỗi. Vui lòng thử lại.');
+            } finally {
+                setLoading(false)
             }
         }
     };
@@ -174,7 +185,10 @@ const CreatePostScreen = ({ route }) => {
                 <View style={styles.post}>
                     <Image source={{ uri: user.avatar.replace(/^image\/upload\//, "") }} style={styles.avatar} />
                     <View>
-                        <Text style={styles.username}>{user.first_name} {user.last_name}</Text>
+                        {user.role === 0 ? (
+                            <Text style={styles.username}>Quản Trị Viên</Text>
+                    ) : (
+                    <Text style={styles.username}>{user.first_name} {user.last_name}</Text>)}
                     </View>
                 </View>
                 <TextInput
@@ -210,7 +224,7 @@ const CreatePostScreen = ({ route }) => {
                 {user.role === 0 && !hideInvitationButton && (
                     <Button style={styles.createInvitationButton} mode="outlined" onPress={() => navigation.navigate('CreateInvitationScreen', { userList, groupList, eventName })}>Tạo thư mời</Button>
                 )}
-                <Button style={styles.submitButton} mode="contained" onPress={submitPost}>Đăng bài</Button>
+                <Button style={styles.submitButton} loading={loading} mode="contained" onPress={submitPost}>Đăng bài</Button>
             </View>
         </View>
     );
@@ -234,7 +248,8 @@ const styles = StyleSheet.create({
     },
     username: {
         fontSize: 18,
-        fontWeight: "bold"
+        fontWeight: "bold",
+        marginStart: 5,
     },
     scrollView: {
         padding: 20,

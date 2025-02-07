@@ -89,9 +89,12 @@ const Approve = () => {
         setLoading(true);
         try {
             const token = await AsyncStorage.getItem("token");
-            await authApis(token).post(endpoints['approve-alumni-bulk'], {
+            await authApis(token).patch(endpoints['approve-alumni-bulk'], {
                 pks: selectedAlumni,
             });
+            setUnverifiedAlumni((prevAlumni) =>
+                prevAlumni.filter((alumnus) => !selectedAlumni.includes(alumnus.id))
+            );
             setSelectedAlumni([]);
             Alert.alert("Thành công", "Đã duyệt các cựu sinh viên được chọn.");
         } catch (error) {
@@ -117,9 +120,12 @@ const Approve = () => {
         setLoading(true);
         try {
             const token = await AsyncStorage.getItem("token");
-            await authApis(token).post(endpoints['reject-alumni-bulk'], {
+            await authApis(token).delete(endpoints['reject-alumni-bulk'], {
                 pks: selectedAlumni,
             });
+            setUnverifiedAlumni((prevAlumni) =>
+                prevAlumni.filter((alumnus) => !selectedAlumni.includes(alumnus.id))
+            );
             setSelectedAlumni([]);
             Alert.alert("Thành công", "Đã xóa các cựu sinh viên được chọn.");
         } catch (error) {

@@ -29,7 +29,6 @@ export const endpoints = {
     'invitation': '/invitation/',
     'my-posts': '/post/my-posts',
     'lock-unlock-comment': postId => `/post/${postId}/lock-unlock-comment/`,
-    'all-users': '/user/all-users/',
 }
 
 export const getPostComments = async (postId) => {
