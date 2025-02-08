@@ -1,16 +1,6 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { GiftedChat } from 'react-native-gifted-chat';
-import {
-    collection,
-    doc,
-    setDoc,
-    addDoc,
-    getDocs,
-    onSnapshot,
-    query,
-    orderBy,
-    serverTimestamp
-} from 'firebase/firestore';
+import { collection, doc, setDoc, addDoc, getDocs, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { getValidImageUrl } from '../PostItem';
 import { db } from '../../firebaseConfig';
 

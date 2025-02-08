@@ -1,5 +1,3 @@
-import os
-
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer, ValidationError, Serializer, CharField, PrimaryKeyRelatedField
 from .models import User, Alumni, Teacher, Post, PostImage, Comment, SurveyOption, SurveyQuestion, SurveyPost, \

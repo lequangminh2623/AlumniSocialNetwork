@@ -8,7 +8,7 @@ from django.db import DatabaseError
 from django.apps import apps
 import logging
 
-from socialnetwork.models import Teacher, BaseModel
+from socialnetwork.models import Teacher, BaseModel, SurveyPost
 
 # Logger for celery tasks
 celery_logger = logging.getLogger('celery')
@@ -82,6 +82,13 @@ def delete_permanently_after_30_days():
         celery_logger.error(f"An unexpected error occurred: {str(generic_error)}")
 
     celery_logger.info("Task completed: delete_permanently_after_30_days")
+
+@shared_task
+def deactivate_expired_surveys():
+    now = timezone.now()
+    expired_surveys = SurveyPost.objects.filter(end_time__lte=now, is_active=True)
+    for survey in expired_surveys:
+        survey.is_active = False
 
 
 @shared_task
