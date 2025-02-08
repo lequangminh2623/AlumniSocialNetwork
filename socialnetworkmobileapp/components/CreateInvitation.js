@@ -3,7 +3,7 @@ import { View, TextInput, Text, ScrollView, StyleSheet, Alert, TouchableOpacity,
 import { Picker } from '@react-native-picker/picker';
 import { IconButton, Button, Checkbox, Searchbar } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import { authApis, endpoints } from '../configs/APIs'; // Đảm bảo import đúng API endpoint
+import { authApis, endpoints } from '../configs/APIs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const getValidImageUrl = (url) => {
@@ -14,8 +14,8 @@ export const getValidImageUrl = (url) => {
 };
 
 const CreateInvitation = () => {
-    const [selectedUsers, setSelectedUsers] = useState([]); // Lưu danh sách người dùng đã chọn
-    const [selectedGroups, setSelectedGroups] = useState([]); // Lưu danh sách nhóm đã chọn
+    const [selectedUsers, setSelectedUsers] = useState([]);
+    const [selectedGroups, setSelectedGroups] = useState([]);
     const [userList, setUserList] = useState([]);
     const [groupList, setGroupList] = useState([]);
     const [token, setToken] = useState(null);
@@ -47,7 +47,6 @@ const CreateInvitation = () => {
         fetchUsers();
     }, [token]);
 
-    // Lấy danh sách nhóm
     useEffect(() => {
         const fetchGroups = async () => {
             if (!token) return;
@@ -61,21 +60,20 @@ const CreateInvitation = () => {
         fetchGroups();
     }, [token]);
 
-    // Xử lý chọn/bỏ chọn người dùng
     const toggleUserSelection = (userId) => {
         setSelectedUsers((prevSelectedUsers) =>
             prevSelectedUsers.includes(userId)
-                ? prevSelectedUsers.filter((id) => id !== userId) // Bỏ chọn nếu đã chọn
-                : [...prevSelectedUsers, userId] // Thêm vào danh sách nếu chưa chọn
+                ? prevSelectedUsers.filter((id) => id !== userId)
+                : [...prevSelectedUsers, userId]
         );
     };
 
-    // Xử lý chọn/bỏ chọn nhóm
+
     const toggleGroupSelection = (groupId) => {
         setSelectedGroups((prevSelectedGroups) =>
             prevSelectedGroups.includes(groupId)
-                ? prevSelectedGroups.filter((id) => id !== groupId) // Bỏ chọn nếu đã chọn
-                : [...prevSelectedGroups, groupId] // Thêm vào danh sách nếu chưa chọn
+                ? prevSelectedGroups.filter((id) => id !== groupId)
+                : [...prevSelectedGroups, groupId]
         );
     };
 

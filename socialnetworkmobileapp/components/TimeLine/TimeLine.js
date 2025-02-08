@@ -14,8 +14,6 @@ const getValidImageUrl = (url) => {
         return url.replace(/^image\/upload\//, "");
     }
     return url;
-    // Thay thế bằng URL ảnh mặc định nếu cần
-    return 'https://example.com/default-image.jpg';
 };
 
 const TimeLine = () => {

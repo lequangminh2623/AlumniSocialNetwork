@@ -28,3 +28,7 @@ class TeacherPermission(permissions.BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
         return request.user.role == 2
+
+class CommentDeletePermission(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.post.user == request.user or obj.user == request.user or getattr(request.user, "role", None) == 0

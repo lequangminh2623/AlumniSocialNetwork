@@ -36,7 +36,6 @@ const CreatePostScreen = ({ route }) => {
         if (route.params?.eventName) setEventName(route.params.eventName);
     }, [route.params]);
 
-    // Chọn ảnh từ thư viện
     const pickImages = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -49,12 +48,10 @@ const CreatePostScreen = ({ route }) => {
         }
     };
 
-    // Function to delete an image
     const deleteImage = (index) => {
         setImages(images.filter((_, i) => i !== index));
     };
 
-    // Lấy token từ AsyncStorage
     const getToken = async () => {
         try {
             const token = await AsyncStorage.getItem('token');
@@ -69,7 +66,6 @@ const CreatePostScreen = ({ route }) => {
         }
     };
 
-    // Gửi bài post lên server
     const submitPost = async () => {
         if(loading) return
         if (!content) {
@@ -82,7 +78,6 @@ const CreatePostScreen = ({ route }) => {
         const formData = new FormData();
         formData.append('content', content);
 
-        // Thêm ảnh vào formData
         images.forEach((image, index) => {
             formData.append('images', {
                 uri: image.uri,
