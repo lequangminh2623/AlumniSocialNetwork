@@ -1,1 +1,1 @@
-# Mạng Xã Hội Cựu Sinh Viên (Django Python + React Native)
+# Social media app (Django Python + React Native + (redis and firebase)) 
