@@ -1,6 +1,6 @@
-# 🎓 Ứng dụng Mạng Xã Hội Cựu Sinh Viên
+# 🎓 Hệ thống Mạng Xã Hội Cựu Sinh Viên
 
-Ứng dụng hỗ trợ kết nối **cựu sinh viên, giảng viên và sinh viên** thông qua mạng xã hội nội bộ, cho phép chia sẻ thông tin, trao đổi học thuật, khảo sát và thông báo sự kiện từ nhà trường.
+Hệ thống hỗ trợ kết nối **cựu sinh viên, giảng viên và sinh viên** thông qua mạng xã hội nội bộ, cho phép chia sẻ thông tin, trao đổi học thuật, khảo sát và thông báo sự kiện từ nhà trường.
 
 ---
 
