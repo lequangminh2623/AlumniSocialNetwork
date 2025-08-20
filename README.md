@@ -36,12 +36,12 @@
 ## 🏗️ Kiến trúc hệ thống
 
 - **Frontend**:  
-  - [ReactJS](https://react.dev/) / [Angular](https://angular.dev/)  
+  - [React Native](https://reactnative.dev/)
   - [TailwindCSS](https://tailwindcss.com/)  
 
 - **Backend**:  
-  - [Django REST Framework](https://www.django-rest-framework.org/) / [Spring Boot](https://spring.io/projects/spring-boot)  
-  - REST API, Authentication & Authorization  
+  - [Django REST Framework](https://www.django-rest-framework.org/)
+  - REST API, OAuth2
 
 - **Cơ sở dữ liệu**:  
   - [MySQL](https://www.mysql.com/) / [PostgreSQL](https://www.postgresql.org/)  
