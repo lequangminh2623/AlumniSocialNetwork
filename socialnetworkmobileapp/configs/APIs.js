@@ -26,7 +26,7 @@ export const endpoints = {
     'submit': surveyId => `/survey/${surveyId}/submit/`,
     'resume': surveyId => `/survey/${surveyId}/resume/`,
     'group': '/group/',
-    'all-users':'/user/all-users/',
+    'all-users': '/user/all-users/',
     'invitation': '/invitation/',
     'my-posts': '/post/my-posts',
     'lock-unlock-comment': postId => `/post/${postId}/lock-unlock-comment/`,
@@ -57,7 +57,7 @@ export const getSurveyData = async (surveyId) => {
         const res = await axios.get(BASE_URL + endpoints["survey-detail"](surveyId));
         return res.data;
     } catch (error) {
-        console.error("Error fetching reacts:", error);
+        console.error("Error fetching survey:", error);
         return [];
     }
 };

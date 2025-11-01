@@ -79,6 +79,7 @@ MIDDLEWARE = [
 CORS_ORIGIN_REGEX_WHITELIST = [
     r"^http://localhost(:[0-9]+)?$", # Regex cho tất cả các port localhost
     r"^http://127\.0\.0\.1(:[0-9]+)?$", # Regex cho 127.0.0.1 và tất cả các port
+    r"^http://10\.0\.2\.2(:[0-9]+)?$", # Regex cho 10.0.2.2 và tất cả các port
 ]
 
 # CORS_ALLOWED_ORIGINS = [
