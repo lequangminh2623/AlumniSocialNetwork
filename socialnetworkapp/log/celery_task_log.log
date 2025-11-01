@@ -1,0 +1,188 @@
+npx expo start
+celery -A socialnetworkapp worker --loglevel=info -P gevent
+celery -A socialnetworkapp beat --loglevel=info
+ubuntu: redis-cli ping
+python manage.py runserver 0.0.0.0:8000DEBUG 2025-11-01 17:16:47,392 functional 
+def lock_expired_teacher_accounts():
+    return 1
+
+DEBUG 2025-11-01 17:16:47,392 functional 
+def delete_permanently_after_30_days():
+    return 1
+
+DEBUG 2025-11-01 17:16:47,393 functional 
+def deactivate_expired_surveys():
+    return 1
+
+DEBUG 2025-11-01 17:16:47,393 functional 
+def send_email_async(subject, message, recipient_email):
+    return 1
+
+DEBUG 2025-11-01 17:16:47,437 functional 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+DEBUG 2025-11-01 17:16:47,437 functional 
+def send_email_async(subject, message, recipient_email):
+    return 1
+
+DEBUG 2025-11-01 17:16:47,438 functional 
+def chunks(task, it, n):
+    return 1
+
+DEBUG 2025-11-01 17:16:47,439 functional 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+DEBUG 2025-11-01 17:16:47,439 functional 
+def debug_task(self):
+    return 1
+
+DEBUG 2025-11-01 17:16:47,439 functional 
+def deactivate_expired_surveys():
+    return 1
+
+DEBUG 2025-11-01 17:16:47,439 functional 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+DEBUG 2025-11-01 17:16:47,440 functional 
+def xmap(task, it):
+    return 1
+
+DEBUG 2025-11-01 17:16:47,440 functional 
+def backend_cleanup():
+    return 1
+
+DEBUG 2025-11-01 17:16:47,440 functional 
+def delete_permanently_after_30_days():
+    return 1
+
+DEBUG 2025-11-01 17:16:47,441 functional 
+def chain(*args, **kwargs):
+    return 1
+
+DEBUG 2025-11-01 17:16:47,441 functional 
+def xstarmap(task, it):
+    return 1
+
+DEBUG 2025-11-01 17:16:47,441 functional 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+DEBUG 2025-11-01 17:16:47,441 functional 
+def lock_expired_teacher_accounts():
+    return 1
+
+DEBUG 2025-11-01 17:16:54,515 functional 
+def send_email_async(subject, message, recipient_email):
+    return 1
+
+DEBUG 2025-11-01 17:16:54,515 functional 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+DEBUG 2025-11-01 17:16:54,515 functional 
+def deactivate_expired_surveys():
+    return 1
+
+DEBUG 2025-11-01 17:16:54,516 functional 
+def chunks(task, it, n):
+    return 1
+
+DEBUG 2025-11-01 17:16:54,516 functional 
+def debug_task(self):
+    return 1
+
+DEBUG 2025-11-01 17:16:54,517 functional 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+DEBUG 2025-11-01 17:16:54,517 functional 
+def lock_expired_teacher_accounts():
+    return 1
+
+DEBUG 2025-11-01 17:16:54,517 functional 
+def delete_permanently_after_30_days():
+    return 1
+
+DEBUG 2025-11-01 17:16:54,517 functional 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+DEBUG 2025-11-01 17:16:54,518 functional 
+def xmap(task, it):
+    return 1
+
+DEBUG 2025-11-01 17:16:54,518 functional 
+def backend_cleanup():
+    return 1
+
+DEBUG 2025-11-01 17:16:54,518 functional 
+def chain(*args, **kwargs):
+    return 1
+
+DEBUG 2025-11-01 17:16:54,519 functional 
+def xstarmap(task, it):
+    return 1
+
+DEBUG 2025-11-01 17:16:54,519 functional 
+def accumulate(self, *args, **kwargs):
+    return 1
+
+DEBUG 2025-11-01 19:45:23,072 functional 
+def chord(self, header, body, partial_args=0, interval=1, countdown=2, max_retries=3, eager=4, **kwargs):
+    return 1
+
+DEBUG 2025-11-01 19:45:23,075 functional 
+def chunks(task, it, n):
+    return 1
+
+DEBUG 2025-11-01 19:45:23,076 functional 
+def debug_task(self):
+    return 1
+
+DEBUG 2025-11-01 19:45:23,077 functional 
+def unlock_chord(self, group_id, callback, interval=0, max_retries=1, result=2, Result=3, GroupResult=4, result_from_tuple=5, **kwargs):
+    return 1
+
+DEBUG 2025-11-01 19:45:23,079 functional 
+def group(self, tasks, result, group_id, partial_args, add_to_parent=0):
+    return 1
+
+DEBUG 2025-11-01 19:45:23,080 functional 
+def send_email_async(subject, message, recipient_email):
+    return 1
+
+DEBUG 2025-11-01 19:45:23,080 functional 
+def xmap(task, it):
+    return 1
+
+DEBUG 2025-11-01 19:45:23,081 functional 
+def deactivate_expired_surveys():
+    return 1
+
+DEBUG 2025-11-01 19:45:23,081 functional 
+def backend_cleanup():
+    return 1
+
+DEBUG 2025-11-01 19:45:23,081 functional 
+def delete_permanently_after_30_days():
+    return 1
+
+DEBUG 2025-11-01 19:45:23,082 functional 
+def lock_expired_teacher_accounts():
+    return 1
+
+DEBUG 2025-11-01 19:45:23,082 functional 
+def chain(*args, **kwargs):
+    return 1
+
+DEBUG 2025-11-01 19:45:23,083 functional 
+def xstarmap(task, it):
+    return 1
+
+DEBUG 2025-11-01 19:45:23,083 functional 
+def accumulate(self, *args, **kwargs):
+    return 1
+

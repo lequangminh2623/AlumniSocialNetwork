@@ -2,8 +2,17 @@ from rest_framework import permissions
 
 
 class OwnerPermission(permissions.IsAuthenticated):
-    def has_object_permission(self, request, view, object):
-        return super().has_permission(request, view) and request.user == object.user
+    def has_object_permission(self, request, view, obj):
+        # Nếu object chính là user
+        if obj == request.user:
+            return True
+
+        # Nếu object có field "user"
+        user_field = getattr(obj, "user", None)
+        if user_field == request.user:
+            return True
+
+        return False
 
 
 class AdminPermission(permissions.BasePermission):
